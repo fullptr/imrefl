@@ -4,7 +4,7 @@
 # TODO: Have a proper solution for building this project
 
 ../clang-p2996/build-llvm/bin/clang++ \
-  test.cpp \
+  example.cpp \
   imgui/imgui.cpp \
   imgui/imgui_draw.cpp \
   imgui/imgui_tables.cpp \

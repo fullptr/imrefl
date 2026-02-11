@@ -77,8 +77,8 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Test");
-        ImRefl::Input("Information", main_player);
+        ImGui::Begin("Debug");
+        ImRefl::Input("Player", main_player);
         ImGui::End();
         ImGui::Render();
 

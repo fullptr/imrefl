@@ -40,7 +40,9 @@ Then expose them to ImGui:
 
 ```cpp
 player main_player = {};
-ImRefl::Input("Debug", main_player);
+ImGui::Begin("Debug");
+ImRefl::Input("Player", main_player);
+ImGui::End();
 ```
 
 That's it!
