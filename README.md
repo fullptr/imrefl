@@ -16,7 +16,30 @@ ImGui::End();
 That's it! No macros or other setup needed!
 
 ## Features
-TBA
+### Supported Types
+* Aggregate structs.
+* Enum classes.
+* Signed integral types, float, double, and bool.
+* `std::string`.
+
+### Helper Annotations
+
++--------------------------+-------------------------------------+
+| Annotation               | Description                         |
++--------------------------+-------------------------------------+
+| ImRefl::hidden           | Hides the annotated from the widget |
++--------------------------+-------------------------------------+
+| ImRefl::readonly         | Shows the field on the widget but   |
+|                          | makes it non-interactable           |
++--------------------------+-------------------------------------+
+| ImRefl::slider(min, max) | Changes the visual style from a     |
+|                          | simple text input into a slider     |
+|                          | with the given limits. Currently    |
+|                          | only implemented for integral types |
++--------------------------+-------------------------------------+
 
 ## Future Work
-TBA
+* All remaining fundamental types.
+* All reasonable standard library types (for some definition of reasonable).
+* Support for third party types such as the glm library.
+* More annotations for other ImGui visual styles and customisation points.
