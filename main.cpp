@@ -25,12 +25,21 @@ enum class fruits
 };
 
 void DrawFruitCombo(fruits& f)
+
 {
-    constexpr const char* names[] = {"apple", "banana", "strawberry"};
-    int index = static_cast<int>(f);
-    if (ImGui::Combo("Fruits", &index, names, std::size(names))) {
-    	f = static_cast<fruits>(index);
+	    const char* currentFruitName = "";
+    switch (f)
+    {
+        case fruits::apple:      currentFruitName = "apple"; break;
+        case fruits::banana:     currentFruitName = "banana"; break;
+        case fruits::strawberry: currentFruitName = "strawberry"; break;
     }
+	if (ImGui::BeginCombo("fruits", currentFruitName)) {
+		if (ImGui::Selectable("apple", f == fruits::apple)) f = fruits::apple;
+		if (ImGui::Selectable("banana", f == fruits::banana)) f = fruits::banana;
+		if (ImGui::Selectable("strawberry", f == fruits::strawberry)) f = fruits::strawberry;
+		ImGui::EndCombo();
+	}
 }
 
 void glfw_error_callback(int error, const char* description)
