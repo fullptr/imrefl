@@ -1,4 +1,6 @@
 #include <imgui.h>
+#include "imrefl.hpp"
+
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
@@ -7,17 +9,41 @@
 #include <experimental/meta>
 #include <print>
 
-struct foo
-{};
-
-void glfw_error_callback(int error, const char* description)
+enum class weapon 
 {
-    std::println("GLFW error {}: {}", error, description);
-}
+    none,
+    sword,
+    bow,
+    staff,
+    wand,
+    mace,
+    hammer,
+    axe
+};
+
+struct player
+{
+    std::string name         = "Link";
+    bool        invulnerable = false;
+    int         health       = 100;
+
+    [[=ImRefl::slider(1, 50)]]
+    int level = 1;
+
+    [[=ImRefl::hidden]]
+    double secret_information = 3.14159;
+
+    [[=ImRefl::readonly]]
+    float attack_modifier = 3.5f;
+
+    weapon current_weapon = weapon::sword;
+};
 
 int main()
 {
-    glfwSetErrorCallback(glfw_error_callback);
+    glfwSetErrorCallback([](int err, const char* desc) {
+        std::println("GLFW error {}: {}", err, desc);
+    });
 
     if (!glfwInit()) {
         return 1;
@@ -27,14 +53,13 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui + GLFW", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "ImRefl Example", nullptr, nullptr);
     if (!window) {
         return 1;
     }
 
     glfwMakeContextCurrent(window);
-    //glfwSwapInterval(1); // vsync
-    std::println("{}\n", std::meta::display_string_of(^^foo));
+    glfwSwapInterval(1); // vsync
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -44,6 +69,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    player main_player = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -51,9 +77,8 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Hello");
-        ImGui::Text("ImGui is working!");
-        ImGui::Text("FPS: %.1f", io.Framerate);
+        ImGui::Begin("Test");
+        ImRefl::Input("Information", main_player);
         ImGui::End();
         ImGui::Render();
 
