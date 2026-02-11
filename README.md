@@ -24,7 +24,7 @@ struct player
     int         health       = 100;
 
     [[=ImRefl::slider(1, 50)]]
-    int level = 1;
+    int level = 14;
 
     [[=ImRefl::hidden]]
     double secret_information = 3.14159;
