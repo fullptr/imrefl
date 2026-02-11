@@ -4,41 +4,7 @@ A library utilising C++26 reflection features to generate ImGui rendering code a
 
 ![Example Image](images/imrefl.png)
 
-Simply declare your types:
-
-```cpp
-enum class weapon 
-{
-    none,
-    sword,
-    bow,
-    staff,
-    wand,
-    mace,
-    hammer,
-    axe
-};
-
-struct player
-{
-    std::string name         = "Link";
-    bool        invulnerable = false;
-    int         health       = 100;
-
-    [[=ImRefl::slider(1, 50)]]
-    int level = 14;
-
-    [[=ImRefl::hidden]]
-    double secret_information = 3.14159;
-
-    [[=ImRefl::readonly]]
-    float attack_modifier = 3.5f;
-
-    weapon current_weapon = weapon::sword;
-};
-```
-
-Then expose them to ImGui:
+Simply declare your types and then expose them to ImGui:
 
 ```cpp
 player main_player = {};
@@ -47,9 +13,9 @@ ImRefl::Input("Player", main_player);
 ImGui::End();
 ```
 
-That's it!
+That's it! No macros or other setup needed!
 
-## Supported Types
+## Features
 TBA
 
 ## Future Work
