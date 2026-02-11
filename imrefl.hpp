@@ -75,6 +75,30 @@ consteval std::optional<ImReflSlider> has_slider(std::meta::info info)
     return {};
 }
 
+template <std::signed_integral T>
+consteval auto get_int_datatype()
+{
+    switch (sizeof(T)) {
+        case 1: return ImGuiDataType_S8;
+        case 2: return ImGuiDataType_S16;
+        case 4: return ImGuiDataType_S32;
+        case 8: return ImGuiDataType_S64;
+    }
+    throw "unknown integral size";
+}
+
+template <std::unsigned_integral T>
+consteval auto get_int_datatype()
+{
+    switch (sizeof(T)) {
+        case 1: return ImGuiDataType_U8;
+        case 2: return ImGuiDataType_U16;
+        case 4: return ImGuiDataType_U32;
+        case 8: return ImGuiDataType_U64;
+    }
+    throw "unknown integral size";
+}
+
 }
 
 template <typename T> void Input(const char* name, T& val);
@@ -94,37 +118,19 @@ void Input(const char* name, T& value)
     }
 }
 
-template <std::signed_integral T>
-void Input(const char* name, T& x)
+// Treat char as a single character string, rather than an integral
+void Input(const char* name, char& c)
 {
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
-        const int min = storage->GetInt(ImGui::GetID("slider_min"));
-        const int max = storage->GetInt(ImGui::GetID("slider_max"));
-        ImGui::SliderInt(name, &x, min, max);
-    } else {
-        ImGui::InputInt(name, &x);
+    char buffer[2] = {c, '\0'};
+    if (ImGui::InputText(name, buffer, sizeof(buffer))) {
+        c = buffer[0];
     }
 }
 
-void Input(const char* name, uint8_t& x)
+template <std::integral T>
+void Input(const char* name, T& val)
 {
-    ImGui::InputScalar(name, ImGuiDataType_U8, &x);
-}
-
-void Input(const char* name, uint16_t& x)
-{
-    ImGui::InputScalar(name, ImGuiDataType_U16, &x);
-}
-
-void Input(const char* name, uint32_t& x)
-{
-    ImGui::InputScalar(name, ImGuiDataType_U32, &x);
-}
-
-void Input(const char* name, uint64_t& x)
-{
-    ImGui::InputScalar(name, ImGuiDataType_U64, &x);
+    ImGui::InputScalar(name, detail::get_int_datatype<T>(), &val);
 }
 
 void Input(const char* name, float& x)
@@ -135,6 +141,16 @@ void Input(const char* name, float& x)
 void Input(const char* name, double& x)
 {
     ImGui::InputDouble(name, &x);
+}
+
+void Input(const char* name, long double& x)
+{
+    // ImGui does not support long double out of the box, but double
+    // precision is almost certainly fine for UI debugging
+    double temp = static_cast<double>(x);
+    if (ImGui::InputDouble(name, &temp)) {
+        x = static_cast<long double>(temp);
+    }
 }
 
 void Input(const char* name, bool& value)
