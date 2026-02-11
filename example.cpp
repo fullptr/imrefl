@@ -25,7 +25,7 @@ struct player
 {
     std::string name         = "Link";
     bool        invulnerable = false;
-    int         health       = 100;
+    uint32_t    health       = 100;
 
     [[=ImRefl::slider(1, 50)]]
     int level = 14;

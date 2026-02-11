@@ -107,6 +107,26 @@ void Input(const char* name, T& x)
     }
 }
 
+void Input(const char* name, uint8_t& x)
+{
+    ImGui::InputScalar(name, ImGuiDataType_U8, &x);
+}
+
+void Input(const char* name, uint16_t& x)
+{
+    ImGui::InputScalar(name, ImGuiDataType_U16, &x);
+}
+
+void Input(const char* name, uint32_t& x)
+{
+    ImGui::InputScalar(name, ImGuiDataType_U32, &x);
+}
+
+void Input(const char* name, uint64_t& x)
+{
+    ImGui::InputScalar(name, ImGuiDataType_U64, &x);
+}
+
 void Input(const char* name, float& x)
 {
     ImGui::InputFloat(name, &x);
