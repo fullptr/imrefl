@@ -26,6 +26,7 @@
   -stdlib=libc++ \
   -freflection \
   -fparameter-reflection \
+  -fexpansion-statements \
   -fannotation-attributes \
   -ffixed-point \
   -O2

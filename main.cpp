@@ -1,4 +1,6 @@
 #include <imgui.h>
+#include "imrefl.hpp"
+
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
@@ -7,8 +9,29 @@
 #include <experimental/meta>
 #include <print>
 
+
 struct foo
-{};
+{
+    int x_pos;
+    double health;
+    float gravity;
+};
+
+enum class fruits
+{
+    apple,
+    banana,
+    strawberry
+};
+
+void DrawFruitCombo(fruits& f)
+{
+    constexpr const char* names[] = {"apple", "banana", "strawberry"};
+    int index = static_cast<int>(f);
+    if (ImGui::Combo("Fruits", &index, names, std::size(names))) {
+    	f = static_cast<fruits>(index);
+    }
+}
 
 void glfw_error_callback(int error, const char* description)
 {
@@ -44,6 +67,8 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    foo f = {};
+    fruits fr = fruits::apple;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -51,10 +76,11 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Hello");
-        ImGui::Text("ImGui is working!");
-        ImGui::Text("FPS: %.1f", io.Framerate);
-        ImGui::End();
+        ImGui::Begin("Test");
+	ImRefl::Input(f);
+	DrawFruitCombo(fr);
+	ImGui::Text("value %d", static_cast<int>(fr));
+	ImGui::End();
         ImGui::Render();
 
         int display_w, display_h;
