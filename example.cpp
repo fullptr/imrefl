@@ -28,7 +28,7 @@ struct player
     int         health       = 100;
 
     [[=ImRefl::slider(1, 50)]]
-    int level = 1;
+    int level = 14;
 
     [[=ImRefl::hidden]]
     double secret_information = 3.14159;
@@ -77,8 +77,8 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Test");
-        ImRefl::Input("Information", main_player);
+        ImGui::Begin("Debug");
+        ImRefl::Input("Player", main_player);
         ImGui::End();
         ImGui::Render();
 
