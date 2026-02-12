@@ -40,6 +40,8 @@ struct player
     [[=ImRefl::color]]
     glm::vec4 shade = {0, 0, 0, 0};
 
+    std::optional<int> maybe = 5;
+
     weapon current_weapon = weapon::sword;
 };
 

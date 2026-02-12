@@ -9,6 +9,7 @@
 #include <format>
 #include <concepts>
 #include <type_traits>
+#include <optional>
 
 namespace ImRefl {
 
@@ -265,6 +266,31 @@ bool Input(const char* name, std::pair<L, R>& value)
     changed = changed || Input(buffer, value.second);
 
     ImGui::PopItemWidth();
+    return changed;
+}
+
+template <typename T>
+bool Input(const char* name, std::optional<T>& value)
+{
+    bool changed = false;
+    if (value.has_value()) {
+        if (ImGui::Button("Delete")) {
+            value = {};
+            changed = true;
+        } else {
+            ImGui::SameLine();
+            Input(name, *value);
+        }
+    }
+    else {
+        if (ImGui::Button("Emplace")) {
+            value.emplace();
+            changed = true;
+        } else {
+            ImGui::SameLine();
+            ImGui::Text("%s", name);
+        }
+    }
     return changed;
 }
 
