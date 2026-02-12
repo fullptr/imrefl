@@ -19,11 +19,13 @@ That's it! No macros or other setup needed!
 ### Supported types
 * Aggregate structs.
 * Enum classes.
-* All arithmetic types, including long double, and bool.
+* All arithmetic types including `long double`.
+* `bool` is rendered as a checkbox.
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
 * `std::pair<L, R>`.
 * `std::optional<T>`.
+* `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
 * `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
