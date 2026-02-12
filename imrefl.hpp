@@ -223,6 +223,18 @@ bool Input(const char* name, glm::vec3& value)
         return ImGui::InputFloat3(name, &value[0]);
     }
 }
+
+bool Input(const char* name, glm::vec4& value)
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+        return ImGui::ColorPicker4(name, &value[0]);
+    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+        return ImGui::ColorEdit4(name, &value[0]);
+    } else {
+        return ImGui::InputFloat4(name, &value[0]);
+    }
+}
 #endif
 
 template <typename L, typename R>
