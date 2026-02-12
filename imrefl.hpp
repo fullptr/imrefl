@@ -79,7 +79,7 @@ consteval std::optional<ImReflSlider> has_slider(std::meta::info info)
 }
 
 template <std::signed_integral T>
-consteval auto int_type()
+consteval auto num_type()
 {
     switch (sizeof(T)) {
         case 1: return ImGuiDataType_S8;
@@ -87,11 +87,11 @@ consteval auto int_type()
         case 4: return ImGuiDataType_S32;
         case 8: return ImGuiDataType_S64;
     }
-    throw "unknown integral size";
+    throw "unknown signed integral size";
 }
 
 template <std::unsigned_integral T>
-consteval auto int_type()
+consteval auto num_type()
 {
     switch (sizeof(T)) {
         case 1: return ImGuiDataType_U8;
@@ -99,7 +99,17 @@ consteval auto int_type()
         case 4: return ImGuiDataType_U32;
         case 8: return ImGuiDataType_U64;
     }
-    throw "unknown integral size";
+    throw "unknown unsigned integral size";
+}
+
+template <std::floating_point T>
+consteval auto num_type()
+{
+    switch (sizeof(T)) {
+        case 4: return ImGuiDataType_Float;
+        case 8: return ImGuiDataType_Double;
+    }
+    throw "unknown floating point size";
 }
 
 template <typename T>
@@ -151,34 +161,15 @@ bool Input(const char* name, char& c)
     return false;
 }
 
-template <std::integral T>
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
 bool Input(const char* name, T& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
     if (const auto limits = detail::slider_limits<T>()) {
-        return ImGui::SliderScalar(name, detail::int_type<T>(), &val, &limits->min, &limits->max);
+        return ImGui::SliderScalar(name, detail::num_type<T>(), &val, &limits->min, &limits->max);
     } else {
-        return ImGui::InputScalar(name, detail::int_type<T>(), &val);
-    }
-}
-
-bool Input(const char* name, float& val)
-{
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (const auto limits = detail::slider_limits<float>()) {
-        return ImGui::SliderFloat(name, &val, limits->min, limits->max);
-    } else {
-        return ImGui::InputFloat(name, &val);
-    }
-}
-
-bool Input(const char* name, double& val)
-{
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (const auto limits = detail::slider_limits<double>()) {
-        return ImGui::SliderScalar(name, ImGuiDataType_Double, &val, &limits->min, &limits->max);
-    } else {
-        return ImGui::InputDouble(name, &val);
+        return ImGui::InputScalar(name, detail::num_type<T>(), &val);
     }
 }
 
