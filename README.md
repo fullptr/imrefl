@@ -22,6 +22,7 @@ That's it! No macros or other setup needed!
 * All arithmetic types, including long double, and bool.
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
+* `std::pair<L, R>`.
 
 ### Helper Annotations
 
@@ -29,15 +30,8 @@ That's it! No macros or other setup needed!
 | Annotation               | Description                         |
 |--------------------------|-------------------------------------|
 | ImRefl::hidden           | Hides the annotated from the widget |
-|--------------------------|-------------------------------------|
-| ImRefl::readonly         | Shows the field on the widget but   |
-|                          | makes it non-interactable           |
-|--------------------------|-------------------------------------|
-| ImRefl::slider(min, max) | Changes the visual style from a     |
-|                          | simple text input into a slider     |
-|                          | with the given limits. implemented  |
-|                          | only for arithmetic types           |
-|--------------------------|-------------------------------------|
+| ImRefl::readonly         | Shows the field on the widget but makes it non-interactable |
+| ImRefl::slider(min, max) | Changes the visual style from a simple text input into a slider with the given limits. implemented only for arithmetic types |
 
 ## Future Work
 * All reasonable standard library types (for some definition of reasonable).
