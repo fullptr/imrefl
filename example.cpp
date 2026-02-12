@@ -30,8 +30,7 @@ struct player
     [[=ImRefl::color]]
     std::array<float, 3> position = {};
 
-    [[=ImRefl::color]]
-    float colour[3] = {};
+    float colour[6] = {};
 };
 
 int main()
