@@ -79,7 +79,7 @@ consteval std::optional<ImReflSlider> has_slider(std::meta::info info)
 }
 
 template <std::signed_integral T>
-consteval auto get_int_datatype()
+consteval auto int_type()
 {
     switch (sizeof(T)) {
         case 1: return ImGuiDataType_S8;
@@ -91,7 +91,7 @@ consteval auto get_int_datatype()
 }
 
 template <std::unsigned_integral T>
-consteval auto get_int_datatype()
+consteval auto int_type()
 {
     switch (sizeof(T)) {
         case 1: return ImGuiDataType_U8;
@@ -100,6 +100,22 @@ consteval auto get_int_datatype()
         case 8: return ImGuiDataType_U64;
     }
     throw "unknown integral size";
+}
+
+template <typename T>
+struct minmax { T min, max; };
+
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+constexpr std::optional<minmax<T>> slider_limits()
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
+        const auto min = static_cast<T>(storage->GetInt(ImGui::GetID("slider_min")));
+        const auto max = static_cast<T>(storage->GetInt(ImGui::GetID("slider_max")));
+        return minmax{min, max};
+    }
+    return {};
 }
 
 }
@@ -139,22 +155,18 @@ template <std::integral T>
 bool Input(const char* name, T& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
-        const auto min = static_cast<T>(storage->GetInt(ImGui::GetID("slider_min")));
-        const auto max = static_cast<T>(storage->GetInt(ImGui::GetID("slider_max")));
-        return ImGui::SliderScalar(name, detail::get_int_datatype<T>(), &val, &min, &max);
+    if (const auto limits = detail::slider_limits<T>()) {
+        return ImGui::SliderScalar(name, detail::int_type<T>(), &val, &limits->min, &limits->max);
     } else {
-        return ImGui::InputScalar(name, detail::get_int_datatype<T>(), &val);
+        return ImGui::InputScalar(name, detail::int_type<T>(), &val);
     }
 }
 
 bool Input(const char* name, float& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
-        const auto min = static_cast<float>(storage->GetInt(ImGui::GetID("slider_min")));
-        const auto max = static_cast<float>(storage->GetInt(ImGui::GetID("slider_max")));
-        return ImGui::SliderFloat(name, &val, min, max);
+    if (const auto limits = detail::slider_limits<float>()) {
+        return ImGui::SliderFloat(name, &val, limits->min, limits->max);
     } else {
         return ImGui::InputFloat(name, &val);
     }
@@ -163,10 +175,8 @@ bool Input(const char* name, float& val)
 bool Input(const char* name, double& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
-        const auto min = static_cast<double>(storage->GetInt(ImGui::GetID("slider_min")));
-        const auto max = static_cast<double>(storage->GetInt(ImGui::GetID("slider_max")));
-        return ImGui::SliderScalar(name, ImGuiDataType_Double, &val, &min, &max);
+    if (const auto limits = detail::slider_limits<double>()) {
+        return ImGui::SliderScalar(name, ImGuiDataType_Double, &val, &limits->min, &limits->max);
     } else {
         return ImGui::InputDouble(name, &val);
     }
@@ -228,7 +238,7 @@ bool Input(const char* name, T& x)
             storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
         }
 
-        changed |= Input(std::meta::identifier_of(member).data(), x.[:member:]);
+        changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
         
         if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
             storage->SetBool(ImGui::GetID("has_slider"), false);
