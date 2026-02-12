@@ -1,5 +1,9 @@
 #include <imgui.h>
 
+#ifdef IMREFL_GLM
+#include <glm/glm.hpp>
+#endif
+
 #include <experimental/meta>
 #include <print>
 #include <format>
@@ -13,6 +17,12 @@ inline static constexpr ImReflIgnore ignore {};
 
 struct ImReflReadonly {};
 inline static constexpr ImReflReadonly readonly {};
+
+struct ImReflColor {};
+inline static constexpr ImReflColor color {};
+
+struct ImReflColorWheel {};
+inline static constexpr ImReflColorWheel color_wheel {};
 
 // TODO: Give this another think, it would be great for this to hold the
 // correct type, but the interface should be as simple as slider(min, max) for
@@ -46,36 +56,21 @@ consteval auto nsdm_of()
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
 }
 
-consteval bool is_ignored(std::meta::info info)
+template <typename T>
+consteval std::optional<T> fetch_annotation(std::meta::info info)
 {
     for (const auto a : std::meta::annotations_of(info)) {
-        if (std::meta::type_of(a) == ^^ImReflIgnore) {
-            return true;
-        }
-    }
-    return false;
-}
-
-consteval bool is_readonly(std::meta::info info)
-{
-    for (const auto a : std::meta::annotations_of(info)) {
-        if (std::meta::type_of(a) == ^^ImReflReadonly) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// TODO: Implement this for other types, currently only supported
-// by integral types
-consteval std::optional<ImReflSlider> has_slider(std::meta::info info)
-{
-    for (const auto a : std::meta::annotations_of(info)) {
-        if (std::meta::type_of(a) == ^^ImReflSlider) {
-            return std::meta::extract<ImReflSlider>(a);
+        if (std::meta::type_of(a) == ^^T) {
+            return std::meta::extract<T>(a);
         }
     }
     return {};
+}
+
+template <typename T>
+consteval bool has_annotation(std::meta::info info)
+{
+    return fetch_annotation<T>(info).has_value();
 }
 
 template <std::signed_integral T>
@@ -211,6 +206,37 @@ bool Input(const char* name, std::string& value)
     );
 }
 
+#ifdef IMREFL_GLM
+bool Input(const char* name, glm::vec2& value)
+{
+    return ImGui::InputFloat2(name, &value[0]);
+}
+
+bool Input(const char* name, glm::vec3& value)
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+        return ImGui::ColorPicker3(name, &value[0]);
+    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+        return ImGui::ColorEdit3(name, &value[0]);
+    } else {
+        return ImGui::InputFloat3(name, &value[0]);
+    }
+}
+
+bool Input(const char* name, glm::vec4& value)
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+        return ImGui::ColorPicker4(name, &value[0]);
+    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+        return ImGui::ColorEdit4(name, &value[0]);
+    } else {
+        return ImGui::InputFloat4(name, &value[0]);
+    }
+}
+#endif
+
 template <typename L, typename R>
 bool Input(const char* name, std::pair<L, R>& value)
 {
@@ -250,24 +276,36 @@ bool Input(const char* name, T& x)
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : detail::nsdm_of<T>()) {
-        if constexpr (!detail::is_ignored(member)) {
-            if constexpr (detail::is_readonly(member)) { ImGui::BeginDisabled(); }
+        if constexpr (!detail::has_annotation<ImReflIgnore>(member)) {
+            if constexpr (detail::has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
 
             // TODO: Generalise this
-            if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
+            if constexpr (constexpr auto slider_info = detail::fetch_annotation<ImReflSlider>(member)) {
                 static_assert(is_arithmetic_type(type_of(member)));
                 storage->SetBool(ImGui::GetID("has_slider"), true);
                 storage->SetInt(ImGui::GetID("slider_min"), slider_info->min);
                 storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
             }
+            if constexpr (detail::has_annotation<ImReflColorWheel>(member)) {
+                storage->SetBool(ImGui::GetID("color_wheel"), true);
+            }
+            if constexpr (detail::has_annotation<ImReflColor>(member)) {
+                storage->SetBool(ImGui::GetID("color"), true);
+            }
 
             changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
             
-            if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
+            if constexpr (detail::has_annotation<ImReflColor>(member)) {
+                storage->SetBool(ImGui::GetID("color"), true);
+            }
+            if constexpr (detail::has_annotation<ImReflColorWheel>(member)) {
+                storage->SetBool(ImGui::GetID("color_wheel"), false);
+            }
+            if constexpr (constexpr auto slider_info = detail::fetch_annotation<ImReflSlider>(member)) {
                 storage->SetBool(ImGui::GetID("has_slider"), false);
             }
 
-            if constexpr (detail::is_readonly(member)) { ImGui::EndDisabled(); }
+            if constexpr (detail::has_annotation<ImReflReadonly>(member)) { ImGui::EndDisabled(); }
         }
     }
 

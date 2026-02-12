@@ -1,10 +1,12 @@
 #include <imgui.h>
+#define IMREFL_GLM
 #include "imrefl.hpp"
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 #include <experimental/meta>
 #include <map>
@@ -34,6 +36,9 @@ struct player
 
     [[=ImRefl::readonly]]
     float attack_modifier = 3.5f;
+
+    [[=ImRefl::color]]
+    glm::vec4 shade = {0, 0, 0, 0};
 
     weapon current_weapon = weapon::sword;
 };

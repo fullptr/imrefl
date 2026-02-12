@@ -4,7 +4,7 @@ A library utilising C++26 reflection features to generate ImGui rendering code a
 
 ![Example Image](images/imrefl.png)
 
-Simply declare your types and then expose them to ImGui:
+Simply include the header, declare your types and call `ImRefl::Input`:
 
 ```cpp
 player main_player = {};
@@ -16,23 +16,28 @@ ImGui::End();
 That's it! No macros or other setup needed!
 
 ## Features
-### Supported Types
+### Supported types
 * Aggregate structs.
 * Enum classes.
 * All arithmetic types, including long double, and bool.
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
 * `std::pair<L, R>`.
+* `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
+    * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
-### Helper Annotations
+### Annotations
 
-| Annotation               | Description                         |
-|--------------------------|-------------------------------------|
-| ImRefl::ignore           | Skips the data member when rendering the widget |
-| ImRefl::readonly         | Shows the field on the widget but makes it non-interactable |
-| ImRefl::slider(min, max) | Changes the visual style from a simple text input into a slider with the given limits. |
+| Annotation                 | Description                         |
+|----------------------------|-------------------------------------|
+| `ImRefl::ignore`           | Skips the data member when rendering the widget |
+| `ImRefl::readonly`         | Shows the field on the widget but makes it non-interactable |
+| `ImRefl::slider(min, max)` | Changes the visual style from a simple text input into a slider with the given limits. |
+| `ImRefl::color`            | Used for `glm::vec3` and `glm::vec4` to display as a color picker. |
+| `ImRegl::color_wheel`      | Similar to the above. |
 
-## Future Work
+## Future work
 * All reasonable standard library types (for some definition of reasonable).
-* Support for third party types such as the glm library.
+* Arrays of arithmetic types, in particular of length 2, 3 and 4.
+* Support for third party types such as the GLM library.
 * More annotations for other ImGui visual styles and customisation points.
