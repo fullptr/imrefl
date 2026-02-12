@@ -34,11 +34,10 @@ That's it! No macros or other setup needed!
 | `ImRefl::ignore`           | Skips the data member when rendering the widget |
 | `ImRefl::readonly`         | Shows the field on the widget but makes it non-interactable |
 | `ImRefl::slider(min, max)` | Changes the visual style from a simple text input into a slider with the given limits. |
-| `ImRefl::color`            | Used for `glm::vec3` and `glm::vec4` to display as a color picker. |
-| `ImRegl::color_wheel`      | Similar to the above. |
+| `ImRefl::color`            | Renders the annotated field as a color picker. Works for 3 and 4 dimensional arrays and spans as well as `glm::vec3` and `glm::vec4`. |
+| `ImRegl::color_wheel`      | Similar to the above but a full color wheel. |
 
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
-* Arrays of arithmetic types, in particular of length 2, 3 and 4.
 * Support for third party types such as the GLM library.
 * More annotations for other ImGui visual styles and customisation points.
