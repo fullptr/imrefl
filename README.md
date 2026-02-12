@@ -19,7 +19,8 @@ That's it! No macros or other setup needed!
 ### Supported Types
 * Aggregate structs.
 * Enum classes.
-* Signed integral types, float, double, and bool.
+* All arithmetic types, including long double, and bool.
+* `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
 
 ### Helper Annotations
@@ -34,12 +35,11 @@ That's it! No macros or other setup needed!
 |--------------------------|-------------------------------------|
 | ImRefl::slider(min, max) | Changes the visual style from a     |
 |                          | simple text input into a slider     |
-|                          | with the given limits. Currently    |
-|                          | only implemented for integral types |
+|                          | with the given limits. implemented  |
+|                          | only for arithmetic types           |
 |--------------------------|-------------------------------------|
 
 ## Future Work
-* All remaining fundamental types.
 * All reasonable standard library types (for some definition of reasonable).
 * Support for third party types such as the glm library.
 * More annotations for other ImGui visual styles and customisation points.
