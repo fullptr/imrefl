@@ -23,6 +23,7 @@ That's it! No macros or other setup needed!
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
 * `std::pair<L, R>`.
+* `std::optional<T>`.
 * `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
