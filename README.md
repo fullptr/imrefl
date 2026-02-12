@@ -28,7 +28,7 @@ That's it! No macros or other setup needed!
 
 | Annotation               | Description                         |
 |--------------------------|-------------------------------------|
-| ImRefl::hidden           | Hides the annotated field from the widget |
+| ImRefl::ignore           | Skips the data member when rendering the widget |
 | ImRefl::readonly         | Shows the field on the widget but makes it non-interactable |
 | ImRefl::slider(min, max) | Changes the visual style from a simple text input into a slider with the given limits. |
 
