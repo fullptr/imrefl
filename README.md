@@ -4,7 +4,7 @@ A library utilising C++26 reflection features to generate ImGui rendering code a
 
 ![Example Image](images/imrefl.png)
 
-Simply declare your types and then expose them to ImGui:
+Simply include the header, declare your types and call `ImRefl::Input`:
 
 ```cpp
 player main_player = {};
@@ -16,7 +16,7 @@ ImGui::End();
 That's it! No macros or other setup needed!
 
 ## Features
-### Supported Types
+### Supported types
 * Aggregate structs.
 * Enum classes.
 * All arithmetic types, including long double, and bool.
@@ -26,7 +26,7 @@ That's it! No macros or other setup needed!
 * `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
-### Helper Annotations
+### Annotations
 
 | Annotation                 | Description                         |
 |----------------------------|-------------------------------------|
@@ -36,7 +36,7 @@ That's it! No macros or other setup needed!
 | `ImRefl::color`            | Used for `glm::vec3` and `glm::vec4` to display as a color picker. |
 | `ImRegl::color_wheel`      | Similar to the above. |
 
-## Future Work
+## Future work
 * All reasonable standard library types (for some definition of reasonable).
 * Arrays of arithmetic types, in particular of length 2, 3 and 4.
 * Support for third party types such as the GLM library.
