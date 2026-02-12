@@ -14,6 +14,9 @@ inline static constexpr ImReflHidden hidden {};
 struct ImReflReadonly {};
 inline static constexpr ImReflReadonly readonly {};
 
+// TODO: Give this another think, it would be great for this to hold the
+// correct type, but the interface should be as simple as slider(min, max) for
+// every type.
 struct ImReflSlider { int min; int max; };
 constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
 
@@ -75,54 +78,119 @@ consteval std::optional<ImReflSlider> has_slider(std::meta::info info)
     return {};
 }
 
+template <std::signed_integral T>
+consteval auto num_type()
+{
+    switch (sizeof(T)) {
+        case 1: return ImGuiDataType_S8;
+        case 2: return ImGuiDataType_S16;
+        case 4: return ImGuiDataType_S32;
+        case 8: return ImGuiDataType_S64;
+    }
+    throw "unknown signed integral size";
+}
+
+template <std::unsigned_integral T>
+consteval auto num_type()
+{
+    switch (sizeof(T)) {
+        case 1: return ImGuiDataType_U8;
+        case 2: return ImGuiDataType_U16;
+        case 4: return ImGuiDataType_U32;
+        case 8: return ImGuiDataType_U64;
+    }
+    throw "unknown unsigned integral size";
+}
+
+template <std::floating_point T>
+consteval auto num_type()
+{
+    switch (sizeof(T)) {
+        case 4: return ImGuiDataType_Float;
+        case 8: return ImGuiDataType_Double;
+    }
+    throw "unknown floating point size";
+}
+
+template <typename T>
+struct minmax { T min, max; };
+
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+constexpr std::optional<minmax<T>> slider_limits()
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
+        const auto min = static_cast<T>(storage->GetInt(ImGui::GetID("slider_min")));
+        const auto max = static_cast<T>(storage->GetInt(ImGui::GetID("slider_max")));
+        return minmax{min, max};
+    }
+    return {};
+}
+
 }
 
 template <typename T> void Input(const char* name, T& val);
 
 template <typename T> requires std::is_scoped_enum_v<T>
-void Input(const char* name, T& value)
+bool Input(const char* name, T& value)
 {
     const auto valueName = detail::enum_to_string(value);
+    bool changed = false;
     if (ImGui::BeginCombo(name, valueName)) {
         template for (constexpr auto e : detail::enums_of<T>()) {
             constexpr auto enumName = std::meta::identifier_of(e);
             if (ImGui::Selectable(enumName.data(), value == [:e:])) {
                 value = [:e:];
+                changed = true;
             }
         }
         ImGui::EndCombo();
     }
+    return changed;
 }
 
-template <std::signed_integral T>
-void Input(const char* name, T& x)
+// Treat char as a single character string, rather than an integral
+bool Input(const char* name, char& c)
+{
+    char buffer[2] = {c, '\0'};
+    if (ImGui::InputText(name, buffer, sizeof(buffer))) {
+        c = buffer[0];
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+bool Input(const char* name, T& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("has_slider"), false)) {
-        const int min = storage->GetInt(ImGui::GetID("slider_min"));
-        const int max = storage->GetInt(ImGui::GetID("slider_max"));
-        ImGui::SliderInt(name, &x, min, max);
+    if (const auto limits = detail::slider_limits<T>()) {
+        return ImGui::SliderScalar(name, detail::num_type<T>(), &val, &limits->min, &limits->max);
     } else {
-        ImGui::InputInt(name, &x);
+        return ImGui::InputScalar(name, detail::num_type<T>(), &val);
     }
 }
 
-void Input(const char* name, float& x)
+bool Input(const char* name, long double& x)
 {
-    ImGui::InputFloat(name, &x);
+    // ImGui does not support long double out of the box, but double
+    // precision is almost certainly fine for UI debugging
+    double temp = static_cast<double>(x);
+    if (Input(name, temp)) {
+        x = temp;
+        return true;
+    }
+    return false;
 }
 
-void Input(const char* name, double& x)
+bool Input(const char* name, bool& value)
 {
-    ImGui::InputDouble(name, &x);
+    return ImGui::Checkbox(name, &value);
 }
 
-void Input(const char* name, bool& value)
-{
-    ImGui::Checkbox(name, &value);
-}
-
-void Input(const char* name, std::string& value)
+bool Input(const char* name, std::string& value)
 {
     auto callback = [](ImGuiInputTextCallbackData* data) -> int {
         if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
@@ -132,8 +200,7 @@ void Input(const char* name, std::string& value)
         }
         return 0;
     };
-    
-    ImGui::InputText(
+    return ImGui::InputText(
         name,
         value.data(),
         value.size() + 1,
@@ -144,9 +211,10 @@ void Input(const char* name, std::string& value)
 }
 
 template <typename T> requires std::is_aggregate_v<T>
-void Input(const char* name, T& x)
+bool Input(const char* name, T& x)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
+    bool changed = false;
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : detail::nsdm_of<T>()) {
@@ -155,13 +223,13 @@ void Input(const char* name, T& x)
 
         // TODO: Generalise this
         if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
-            static_assert(std::meta::type_of(member) == ^^int);
+            static_assert(is_arithmetic_type(type_of(member)));
             storage->SetBool(ImGui::GetID("has_slider"), true);
             storage->SetInt(ImGui::GetID("slider_min"), slider_info->min);
             storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
         }
 
-        Input(std::meta::identifier_of(member).data(), x.[:member:]);
+        changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
         
         if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
             storage->SetBool(ImGui::GetID("has_slider"), false);
@@ -169,6 +237,8 @@ void Input(const char* name, T& x)
 
         if constexpr (detail::is_readonly(member)) { ImGui::EndDisabled(); }
     }
+
+    return changed;
 }
 
 template <typename T>

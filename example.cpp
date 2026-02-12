@@ -25,22 +25,24 @@ struct player
 {
     std::string name         = "Link";
     bool        invulnerable = false;
-    int         health       = 100;
 
     [[=ImRefl::slider(1, 50)]]
     int level = 14;
 
-    [[=ImRefl::hidden]]
-    double secret_information = 3.14159;
+    [[=ImRefl::slider(1.0, 250.25)]]
+    long double secret_information = 3.14159;
 
     [[=ImRefl::readonly]]
     float attack_modifier = 3.5f;
+
+    char val = 'a';
 
     weapon current_weapon = weapon::sword;
 };
 
 int main()
 {
+    std::print("{}\n", sizeof(int));
     glfwSetErrorCallback([](int err, const char* desc) {
         std::println("GLFW error {}: {}", err, desc);
     });
