@@ -22,6 +22,7 @@ That's it! No macros or other setup needed!
 * All arithmetic types, including long double, and bool.
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
+* `std::pair<L, R>`.
 
 ### Helper Annotations
 
