@@ -8,8 +8,8 @@
 
 namespace ImRefl {
 
-struct ImReflHidden {};
-inline static constexpr ImReflHidden hidden {};
+struct ImReflIgnore {};
+inline static constexpr ImReflIgnore ignore {};
 
 struct ImReflReadonly {};
 inline static constexpr ImReflReadonly readonly {};
@@ -46,10 +46,10 @@ consteval auto nsdm_of()
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
 }
 
-consteval bool is_hidden(std::meta::info info)
+consteval bool is_ignored(std::meta::info info)
 {
     for (const auto a : std::meta::annotations_of(info)) {
-        if (std::meta::type_of(a) == ^^ImReflHidden) {
+        if (std::meta::type_of(a) == ^^ImReflIgnore) {
             return true;
         }
     }
@@ -250,24 +250,25 @@ bool Input(const char* name, T& x)
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : detail::nsdm_of<T>()) {
-        if constexpr (detail::is_hidden(member)) { continue; }
-        if constexpr (detail::is_readonly(member)) { ImGui::BeginDisabled(); }
+        if constexpr (!detail::is_ignored(member)) {
+            if constexpr (detail::is_readonly(member)) { ImGui::BeginDisabled(); }
 
-        // TODO: Generalise this
-        if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
-            static_assert(is_arithmetic_type(type_of(member)));
-            storage->SetBool(ImGui::GetID("has_slider"), true);
-            storage->SetInt(ImGui::GetID("slider_min"), slider_info->min);
-            storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
+            // TODO: Generalise this
+            if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
+                static_assert(is_arithmetic_type(type_of(member)));
+                storage->SetBool(ImGui::GetID("has_slider"), true);
+                storage->SetInt(ImGui::GetID("slider_min"), slider_info->min);
+                storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
+            }
+
+            changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
+            
+            if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
+                storage->SetBool(ImGui::GetID("has_slider"), false);
+            }
+
+            if constexpr (detail::is_readonly(member)) { ImGui::EndDisabled(); }
         }
-
-        changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
-        
-        if constexpr (constexpr auto slider_info = detail::has_slider(member)) {
-            storage->SetBool(ImGui::GetID("has_slider"), false);
-        }
-
-        if constexpr (detail::is_readonly(member)) { ImGui::EndDisabled(); }
     }
 
     return changed;

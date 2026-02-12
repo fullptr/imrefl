@@ -7,14 +7,35 @@
 #include <GLFW/glfw3.h>
 
 #include <experimental/meta>
+#include <map>
 #include <print>
+
+enum class weapon
+{
+    none,
+    sword,
+    bow,
+    staff,
+    wand,
+    axe
+};
 
 struct player
 {
-    std::pair<int, int> position = {0, 0};
-    int x = 5;
+    std::string name         = "Link";
+    bool        invulnerable = false;
+    int         health       = 100;
 
-    std::string name = "Matt";
+    [[=ImRefl::slider(1, 50)]]
+    int level = 14;
+
+    [[=ImRefl::ignore]]
+    double secret_information = 3.14159;
+
+    [[=ImRefl::readonly]]
+    float attack_modifier = 3.5f;
+
+    weapon current_weapon = weapon::sword;
 };
 
 int main()
