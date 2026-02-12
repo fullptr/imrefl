@@ -189,28 +189,45 @@ bool Input(const char* name, bool& value)
     return ImGui::Checkbox(name, &value);
 }
 
+template <detail::arithmetic T>
+bool Input(const char* name, std::span<T> arr)
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    switch (arr.size()) {
+    case 0: {
+        ImGui::Text("span '%s' is of length 0", name);
+        return false;
+    } break;
+    case 3: {
+        if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+            return ImGui::ColorPicker3(name, arr.data());
+        } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+            return ImGui::ColorEdit3(name, arr.data());
+        }
+    } break;
+    case 4: {
+        if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+            return ImGui::ColorPicker4(name, arr.data());
+        } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+            return ImGui::ColorEdit4(name, arr.data());
+        }
+    } break;
+    }
+    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
+}
+
 template <detail::arithmetic T, std::size_t N>
     requires (N > 0)
 bool Input(const char* name, T (&arr)[N])
 {
-    return ImGui::InputScalarN(name, detail::num_type<T>(), arr, N);
+    return Input(name, std::span<T>{arr, N});
 }
 
 template <detail::arithmetic T, std::size_t N>
     requires (N > 0)
 bool Input(const char* name, std::array<T, N>& arr)
 {
-    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), N);
-}
-
-template <detail::arithmetic T>
-bool Input(const char* name, std::span<T> arr)
-{
-    if (arr.size() == 0) {
-        ImGui::Text("span '%s' is of length 0", name);
-        return false;
-    }
-    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
+    return Input(name, std::span<T>{arr.begin(), arr.end()});
 }
 
 bool Input(const char* name, std::string& value)
