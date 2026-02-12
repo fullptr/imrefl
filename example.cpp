@@ -26,6 +26,8 @@ struct player
 {
     std::optional<std::string> name = "Aragorn";
     std::optional<weapon> main_hand = {};
+
+    std::array<float, 4> position = {};
 };
 
 int main()

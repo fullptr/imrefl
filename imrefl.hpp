@@ -33,6 +33,9 @@ constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
 
 namespace detail {
 
+template <typename T>
+concept arithmetic = std::integral<T> || std::floating_point<T>;
+
 template <typename E> requires std::is_scoped_enum_v<E>
 constexpr const char* enum_to_string(E value)
 {
@@ -108,11 +111,10 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-template <typename T>
+template <detail::arithmetic T>
 struct minmax { T min, max; };
 
-template <typename T>
-    requires std::integral<T> || std::floating_point<T>
+template <detail::arithmetic T>
 constexpr std::optional<minmax<T>> slider_limits()
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
@@ -185,6 +187,12 @@ bool Input(const char* name, long double& x)
 bool Input(const char* name, bool& value)
 {
     return ImGui::Checkbox(name, &value);
+}
+
+template <detail::arithmetic T, std::size_t N>
+bool Input(const char* name, std::array<T, N>& arr)
+{
+    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), N);
 }
 
 bool Input(const char* name, std::string& value)
@@ -296,7 +304,7 @@ bool Input(const char* name, std::optional<T>& value)
     return changed;
 }
 
-template <typename T> requires std::is_aggregate_v<T>
+template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Input(const char* name, T& x)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
