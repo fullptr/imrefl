@@ -253,31 +253,17 @@ bool Input(const char* name, std::string& value)
 #ifdef IMREFL_GLM
 bool Input(const char* name, glm::vec2& value)
 {
-    return ImGui::InputFloat2(name, &value[0]);
+    return Input(name, std::span{&value[0], 2});
 }
 
 bool Input(const char* name, glm::vec3& value)
 {
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-        return ImGui::ColorPicker3(name, &value[0]);
-    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-        return ImGui::ColorEdit3(name, &value[0]);
-    } else {
-        return ImGui::InputFloat3(name, &value[0]);
-    }
+    return Input(name, std::span{&value[0], 3});
 }
 
 bool Input(const char* name, glm::vec4& value)
 {
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-        return ImGui::ColorPicker4(name, &value[0]);
-    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-        return ImGui::ColorEdit4(name, &value[0]);
-    } else {
-        return ImGui::InputFloat4(name, &value[0]);
-    }
+    return Input(name, std::span{&value[0], 4});
 }
 #endif
 

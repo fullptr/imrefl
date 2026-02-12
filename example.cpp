@@ -24,13 +24,11 @@ enum class weapon
 
 struct player
 {
-    std::optional<std::string> name = "Aragorn";
-    std::optional<weapon> main_hand = {};
+    glm::vec2 pos;
+    glm::vec3 colour;
 
     [[=ImRefl::color]]
-    std::array<float, 3> position = {};
-
-    float colour[6] = {};
+    glm::vec4 rgba;
 };
 
 int main()
