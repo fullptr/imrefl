@@ -9,35 +9,12 @@
 #include <experimental/meta>
 #include <print>
 
-enum class weapon 
-{
-    none,
-    sword,
-    bow,
-    staff,
-    wand,
-    mace,
-    hammer,
-    axe
-};
-
 struct player
 {
-    std::string name         = "Link";
-    bool        invulnerable = false;
+    std::pair<int, int> position = {0, 0};
+    int x = 5;
 
-    [[=ImRefl::slider(1, 50)]]
-    int level = 14;
-
-    [[=ImRefl::slider(1.0, 250.25)]]
-    long double secret_information = 3.14159;
-
-    [[=ImRefl::readonly]]
-    float attack_modifier = 3.5f;
-
-    char val = 'a';
-
-    weapon current_weapon = weapon::sword;
+    std::string name = "Matt";
 };
 
 int main()

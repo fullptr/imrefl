@@ -130,7 +130,7 @@ constexpr std::optional<minmax<T>> slider_limits()
 
 }
 
-template <typename T> void Input(const char* name, T& val);
+template <typename T> bool Input(const char* name, T& val);
 
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Input(const char* name, T& value)
@@ -150,6 +150,19 @@ bool Input(const char* name, T& value)
     return changed;
 }
 
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+bool Input(const char* name, T& val)
+{
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    if (const auto limits = detail::slider_limits<T>()) {
+        return ImGui::SliderScalar(name, detail::num_type<T>(), &val, &limits->min, &limits->max);
+    } else {
+        const T step = 1; // Only used for integral types
+        return ImGui::InputScalar(name, detail::num_type<T>(), &val, std::integral<T> ? &step : nullptr);
+    }
+}
+
 // Treat char as a single character string, rather than an integral
 bool Input(const char* name, char& c)
 {
@@ -161,22 +174,10 @@ bool Input(const char* name, char& c)
     return false;
 }
 
-template <typename T>
-    requires std::integral<T> || std::floating_point<T>
-bool Input(const char* name, T& val)
-{
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (const auto limits = detail::slider_limits<T>()) {
-        return ImGui::SliderScalar(name, detail::num_type<T>(), &val, &limits->min, &limits->max);
-    } else {
-        return ImGui::InputScalar(name, detail::num_type<T>(), &val);
-    }
-}
-
+// ImGui does not support long double out of the box, but double
+// precision is almost certainly fine for UI debugging
 bool Input(const char* name, long double& x)
 {
-    // ImGui does not support long double out of the box, but double
-    // precision is almost certainly fine for UI debugging
     double temp = static_cast<double>(x);
     if (Input(name, temp)) {
         x = temp;
@@ -208,6 +209,37 @@ bool Input(const char* name, std::string& value)
         callback,
         static_cast<void*>(&value)
     );
+}
+
+template <typename L, typename R>
+bool Input(const char* name, std::pair<L, R>& value)
+{
+    ImGui::Text("%s", name);
+    char buffer[256] = {}; // This should be long enough for variable name
+    const auto name_length = std::strlen(name); 
+    if (name_length > sizeof(buffer) - 1 - 3) { // -1 for null terminator, -3 for ##L prefix
+        ImGui::Text("Cannot display variable '%s', name too long", name);
+        return false;
+    }
+    bool changed = false;
+    buffer[0] = '#';
+    buffer[1] = '#';
+
+    const auto half_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f;
+    ImGui::PushItemWidth(half_width);
+
+    buffer[2] = 'L';
+    std::memcpy(&buffer[3], name, std::strlen(name));
+    changed = changed || Input(buffer, value.first);
+
+    ImGui::SameLine();  // Both elements are on the same line
+
+    buffer[2] = 'R';
+    std::memcpy(&buffer[3], name, std::strlen(name));
+    changed = changed || Input(buffer, value.second);
+
+    ImGui::PopItemWidth();
+    return changed;
 }
 
 template <typename T> requires std::is_aggregate_v<T>
@@ -242,7 +274,7 @@ bool Input(const char* name, T& x)
 }
 
 template <typename T>
-void Input(const char* name, T& val)
+bool Input(const char* name, T& val)
 {
     static_assert(false && "not implemented for this type"); 
 }
