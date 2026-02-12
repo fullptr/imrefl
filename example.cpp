@@ -24,25 +24,8 @@ enum class weapon
 
 struct player
 {
-    std::string name         = "Link";
-    bool        invulnerable = false;
-    int         health       = 100;
-
-    [[=ImRefl::slider(1, 50)]]
-    int level = 14;
-
-    [[=ImRefl::ignore]]
-    double secret_information = 3.14159;
-
-    [[=ImRefl::readonly]]
-    float attack_modifier = 3.5f;
-
-    [[=ImRefl::color]]
-    glm::vec4 shade = {0, 0, 0, 0};
-
-    std::optional<int> maybe = 5;
-
-    weapon current_weapon = weapon::sword;
+    std::optional<std::string> name = "Aragorn";
+    std::optional<weapon> main_hand = {};
 };
 
 int main()

@@ -273,6 +273,7 @@ template <typename T>
 bool Input(const char* name, std::optional<T>& value)
 {
     bool changed = false;
+    ImGui::PushID(name);
     if (value.has_value()) {
         if (ImGui::Button("Delete")) {
             value = {};
@@ -283,7 +284,7 @@ bool Input(const char* name, std::optional<T>& value)
         }
     }
     else {
-        if (ImGui::Button("Emplace")) {
+        if (ImGui::Button("New")) {
             value.emplace();
             changed = true;
         } else {
@@ -291,6 +292,7 @@ bool Input(const char* name, std::optional<T>& value)
             ImGui::Text("%s", name);
         }
     }
+    ImGui::PopID();
     return changed;
 }
 
