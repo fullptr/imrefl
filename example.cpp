@@ -27,7 +27,8 @@ struct player
     std::optional<std::string> name = "Aragorn";
     std::optional<weapon> main_hand = {};
 
-    std::array<float, 4> position = {};
+    std::array<float, 3> position = {};
+    std::span<float> view = {};
 };
 
 int main()

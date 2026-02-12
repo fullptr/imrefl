@@ -190,9 +190,27 @@ bool Input(const char* name, bool& value)
 }
 
 template <detail::arithmetic T, std::size_t N>
+    requires (N > 0)
+bool Input(const char* name, T (&arr)[N])
+{
+    return ImGui::InputScalarN(name, detail::num_type<T>(), arr, N);
+}
+
+template <detail::arithmetic T, std::size_t N>
+    requires (N > 0)
 bool Input(const char* name, std::array<T, N>& arr)
 {
     return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), N);
+}
+
+template <detail::arithmetic T>
+bool Input(const char* name, std::span<T> arr)
+{
+    if (arr.size() == 0) {
+        ImGui::Text("span '%s' is of length 0", name);
+        return false;
+    }
+    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
 }
 
 bool Input(const char* name, std::string& value)
