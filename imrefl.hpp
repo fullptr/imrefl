@@ -187,7 +187,7 @@ bool Render(const char* name, T& val, const Config& config)
         return ImGui::SliderScalar(name, num_type<T>(), &val, &min, &max);
     } else {
         const T step = 1; // Only used for integral types
-        return ImGui::InputScalar(name, num_type<T>(), &val, std::integral<T> ? &step : nullptr);
+        return ImGui::InputScalarN(name, num_type<T>(), &val, 1, std::integral<T> ? &step : nullptr);
     }
 }
 
@@ -348,9 +348,7 @@ bool Render(const char* name, T& x, const Config& config)
 
             if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
 
-            // TODO: Generalise this
             if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
-                static_assert(is_arithmetic_type(type_of(member)));
                 new_config.slider = *slider_info;
             }
             if constexpr (has_annotation<ImReflColorWheel>(member)) {

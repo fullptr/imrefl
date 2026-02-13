@@ -23,10 +23,8 @@ struct entity
     bool invulnerable = false;
     int health = 100;
 
-    [[=ImRefl::slider(1, 60)]]
-    int level = 14;
-
-    weapon current = weapon::sword;
+    [[=ImRefl::slider(0, 1)]]
+    float coords[3] = {};
 };
 
 int main()
