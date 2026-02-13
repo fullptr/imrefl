@@ -111,10 +111,10 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-template <detail::arithmetic T>
+template <arithmetic T>
 struct minmax { T min, max; };
 
-template <detail::arithmetic T>
+template <arithmetic T>
 constexpr std::optional<minmax<T>> slider_limits()
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
@@ -126,57 +126,55 @@ constexpr std::optional<minmax<T>> slider_limits()
     return {};
 }
 
-}
-
-// Input forward decls
+// Forward decls
 
 template <typename T>
-bool Input(const char* name, T& val);
+bool Render(const char* name, T& val);
 
 template <typename T> requires std::is_scoped_enum_v<T>
-bool Input(const char* name, T& value);
+bool Render(const char* name, T& value);
 
-template <detail::arithmetic T>
-bool Input(const char* name, T& val);
+template <arithmetic T>
+bool Render(const char* name, T& val);
 
-bool Input(const char* name, char& c);
-bool Input(const char* name, long double& x);
-bool Input(const char* name, bool& value);
+bool Render(const char* name, char& c);
+bool Render(const char* name, long double& x);
+bool Render(const char* name, bool& value);
 
-template <detail::arithmetic T>
-bool Input(const char* name, std::span<T> arr);
+template <arithmetic T>
+bool Render(const char* name, std::span<T> arr);
 
-template <detail::arithmetic T, std::size_t N> requires (N > 0)
-bool Input(const char* name, T (&arr)[N]);
+template <arithmetic T, std::size_t N> requires (N > 0)
+bool Render(const char* name, T (&arr)[N]);
 
-template <detail::arithmetic T, std::size_t N> requires (N > 0)
-bool Input(const char* name, std::array<T, N>& arr);
+template <arithmetic T, std::size_t N> requires (N > 0)
+bool Render(const char* name, std::array<T, N>& arr);
 
-bool Input(const char* name, std::string& value);
+bool Render(const char* name, std::string& value);
 
 #ifdef IMREFL_GLM
-template <int Size, detail::arithmetic T, glm::qualifier Qual>
-bool Input(const char* name, glm::vec<Size, T, Qual>& value);
+template <int Size, arithmetic T, glm::qualifier Qual>
+bool Render(const char* name, glm::vec<Size, T, Qual>& value);
 #endif
 
 template <typename L, typename R>
-bool Input(const char* name, std::pair<L, R>& value);
+bool Render(const char* name, std::pair<L, R>& value);
 
 template <typename T>
-bool Input(const char* name, std::optional<T>& value);
+bool Render(const char* name, std::optional<T>& value);
 
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
-bool Input(const char* name, T& x);
+bool Render(const char* name, T& x);
 
 // End of forward decls
 
 template <typename T> requires std::is_scoped_enum_v<T>
-bool Input(const char* name, T& value)
+bool Render(const char* name, T& value)
 {
-    const auto valueName = detail::enum_to_string(value);
+    const auto valueName = enum_to_string(value);
     bool changed = false;
     if (ImGui::BeginCombo(name, valueName)) {
-        template for (constexpr auto e : detail::enums_of<T>()) {
+        template for (constexpr auto e : enums_of<T>()) {
             constexpr auto enumName = std::meta::identifier_of(e);
             if (ImGui::Selectable(enumName.data(), value == [:e:])) {
                 value = [:e:];
@@ -188,20 +186,20 @@ bool Input(const char* name, T& value)
     return changed;
 }
 
-template <detail::arithmetic T>
-bool Input(const char* name, T& val)
+template <arithmetic T>
+bool Render(const char* name, T& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (const auto limits = detail::slider_limits<T>()) {
-        return ImGui::SliderScalar(name, detail::num_type<T>(), &val, &limits->min, &limits->max);
+    if (const auto limits = slider_limits<T>()) {
+        return ImGui::SliderScalar(name, num_type<T>(), &val, &limits->min, &limits->max);
     } else {
         const T step = 1; // Only used for integral types
-        return ImGui::InputScalar(name, detail::num_type<T>(), &val, std::integral<T> ? &step : nullptr);
+        return ImGui::InputScalar(name, num_type<T>(), &val, std::integral<T> ? &step : nullptr);
     }
 }
 
 // Treat char as a single character string, rather than an integral
-bool Input(const char* name, char& c)
+bool Render(const char* name, char& c)
 {
     char buffer[2] = {c, '\0'};
     if (ImGui::InputText(name, buffer, sizeof(buffer))) {
@@ -213,23 +211,23 @@ bool Input(const char* name, char& c)
 
 // ImGui does not support long double out of the box, but double
 // precision is almost certainly fine for UI debugging
-bool Input(const char* name, long double& x)
+bool Render(const char* name, long double& x)
 {
     double temp = static_cast<double>(x);
-    if (Input(name, temp)) {
+    if (Render(name, temp)) {
         x = temp;
         return true;
     }
     return false;
 }
 
-bool Input(const char* name, bool& value)
+bool Render(const char* name, bool& value)
 {
     return ImGui::Checkbox(name, &value);
 }
 
-template <detail::arithmetic T>
-bool Input(const char* name, std::span<T> arr)
+template <arithmetic T>
+bool Render(const char* name, std::span<T> arr)
 {
     if (arr.empty()) {
         ImGui::Text("span '%s' is of length 0", name);
@@ -257,24 +255,24 @@ bool Input(const char* name, std::span<T> arr)
         }
     }
 
-    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
+    return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size());
 }
 
-template <detail::arithmetic T, std::size_t N>
+template <arithmetic T, std::size_t N>
     requires (N > 0)
-bool Input(const char* name, T (&arr)[N])
+bool Render(const char* name, T (&arr)[N])
 {
-    return Input(name, std::span<T>{arr, N});
+    return Render(name, std::span<T>{arr, N});
 }
 
-template <detail::arithmetic T, std::size_t N>
+template <arithmetic T, std::size_t N>
     requires (N > 0)
-bool Input(const char* name, std::array<T, N>& arr)
+bool Render(const char* name, std::array<T, N>& arr)
 {
-    return Input(name, std::span<T>{arr.begin(), arr.end()});
+    return Render(name, std::span<T>{arr.begin(), arr.end()});
 }
 
-bool Input(const char* name, std::string& value)
+bool Render(const char* name, std::string& value)
 {
     auto callback = [](ImGuiInputTextCallbackData* data) -> int {
         if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
@@ -295,15 +293,15 @@ bool Input(const char* name, std::string& value)
 }
 
 #ifdef IMREFL_GLM
-template <int Size, detail::arithmetic T, glm::qualifier Qual>
-bool Input(const char* name, glm::vec<Size, T, Qual>& value)
+template <int Size, arithmetic T, glm::qualifier Qual>
+bool Render(const char* name, glm::vec<Size, T, Qual>& value)
 {
-    return Input(name, std::span{&value[0], Size});
+    return Render(name, std::span{&value[0], Size});
 }
 #endif
 
 template <typename L, typename R>
-bool Input(const char* name, std::pair<L, R>& value)
+bool Render(const char* name, std::pair<L, R>& value)
 {
     ImGui::Text("%s", name);
 
@@ -312,15 +310,15 @@ bool Input(const char* name, std::pair<L, R>& value)
     ImGui::PushItemWidth(width / 2.0f);
 
     bool changed = false;
-    changed = changed || Input("first", value.first);
-    changed = changed || Input("second", value.second);
+    changed = changed || Render("first", value.first);
+    changed = changed || Render("second", value.second);
 
     ImGui::PopItemWidth();
     return changed;
 }
 
 template <typename T>
-bool Input(const char* name, std::optional<T>& value)
+bool Render(const char* name, std::optional<T>& value)
 {
     bool changed = false;
     ImGui::PushID(name);
@@ -330,7 +328,7 @@ bool Input(const char* name, std::optional<T>& value)
             changed = true;
         } else {
             ImGui::SameLine();
-            Input(name, *value);
+            Render(name, *value);
         }
     }
     else {
@@ -347,43 +345,43 @@ bool Input(const char* name, std::optional<T>& value)
 }
 
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
-bool Input(const char* name, T& x)
+bool Render(const char* name, T& x)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
     bool changed = false;
 
     ImGui::Text("%s", name);
-    template for (constexpr auto member : detail::nsdm_of<T>()) {
-        if constexpr (!detail::has_annotation<ImReflIgnore>(member)) {
-            if constexpr (detail::has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
+    template for (constexpr auto member : nsdm_of<T>()) {
+        if constexpr (!has_annotation<ImReflIgnore>(member)) {
+            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
 
             // TODO: Generalise this
-            if constexpr (constexpr auto slider_info = detail::fetch_annotation<ImReflSlider>(member)) {
+            if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
                 static_assert(is_arithmetic_type(type_of(member)));
                 storage->SetBool(ImGui::GetID("has_slider"), true);
                 storage->SetInt(ImGui::GetID("slider_min"), slider_info->min);
                 storage->SetInt(ImGui::GetID("slider_max"), slider_info->max);
             }
-            if constexpr (detail::has_annotation<ImReflColorWheel>(member)) {
+            if constexpr (has_annotation<ImReflColorWheel>(member)) {
                 storage->SetBool(ImGui::GetID("color_wheel"), true);
             }
-            if constexpr (detail::has_annotation<ImReflColor>(member)) {
+            if constexpr (has_annotation<ImReflColor>(member)) {
                 storage->SetBool(ImGui::GetID("color"), true);
             }
 
-            changed = changed || Input(std::meta::identifier_of(member).data(), x.[:member:]);
+            changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:]);
             
-            if constexpr (detail::has_annotation<ImReflColor>(member)) {
+            if constexpr (has_annotation<ImReflColor>(member)) {
                 storage->SetBool(ImGui::GetID("color"), true);
             }
-            if constexpr (detail::has_annotation<ImReflColorWheel>(member)) {
+            if constexpr (has_annotation<ImReflColorWheel>(member)) {
                 storage->SetBool(ImGui::GetID("color_wheel"), false);
             }
-            if constexpr (constexpr auto slider_info = detail::fetch_annotation<ImReflSlider>(member)) {
+            if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
                 storage->SetBool(ImGui::GetID("has_slider"), false);
             }
 
-            if constexpr (detail::has_annotation<ImReflReadonly>(member)) { ImGui::EndDisabled(); }
+            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::EndDisabled(); }
         }
     }
 
@@ -391,9 +389,16 @@ bool Input(const char* name, T& x)
 }
 
 template <typename T>
-bool Input(const char* name, T& val)
+bool Render(const char* name, T& val)
 {
     static_assert(false && "not implemented for this type"); 
 }
 
+}  // namespace detail
+
+bool Input(const char* name, auto& value)
+{
+    return detail::Render(name, value);
 }
+
+}  // namespace ImRefl
