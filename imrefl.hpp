@@ -25,11 +25,15 @@ inline static constexpr ImReflColor color {};
 struct ImReflColorWheel {};
 inline static constexpr ImReflColorWheel color_wheel {};
 
-// TODO: Give this another think, it would be great for this to hold the
-// correct type, but the interface should be as simple as slider(min, max) for
-// every type.
+// TODO: Give this another think; should these be floats?
+// Or should we have slider() and sliderf(), which I don't really like.
 struct ImReflSlider { int min; int max; };
 constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
+
+// TODO: Same todo as the above, but speed is always a float
+// since that is what ImGui supports.
+struct ImReflDrag { int min; int max; };
+constexpr ImReflDrag drag(int min, int max) { return {min, max}; }
 
 namespace detail {
 
@@ -38,6 +42,7 @@ struct Config
     bool color                         = false;
     bool color_wheel                   = false;
     std::optional<ImReflSlider> slider = {};
+    std::optional<ImReflDrag> drag     = {};
 };
 
 template <typename T>

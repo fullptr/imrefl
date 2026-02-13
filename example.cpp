@@ -21,6 +21,8 @@ struct entity
 {
     std::string name;
     bool invulnerable = false;
+
+    [[=ImRefl::drag(0, 200)]]
     int health = 100;
 
     [[=ImRefl::slider(0, 1)]]
