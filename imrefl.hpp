@@ -192,27 +192,32 @@ bool Input(const char* name, bool& value)
 template <detail::arithmetic T>
 bool Input(const char* name, std::span<T> arr)
 {
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    switch (arr.size()) {
-    case 0: {
+    if (arr.empty()) {
         ImGui::Text("span '%s' is of length 0", name);
         return false;
-    } break;
-    case 3: {
-        if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-            return ImGui::ColorPicker3(name, arr.data());
-        } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-            return ImGui::ColorEdit3(name, arr.data());
-        }
-    } break;
-    case 4: {
-        if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-            return ImGui::ColorPicker4(name, arr.data());
-        } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-            return ImGui::ColorEdit4(name, arr.data());
-        }
-    } break;
     }
+
+    // Only floating point types permit the color options
+    if constexpr (std::floating_point<T>) {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        switch (arr.size()) {
+            case 3: {
+                if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+                    return ImGui::ColorPicker3(name, arr.data());
+                } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+                    return ImGui::ColorEdit3(name, arr.data());
+                }
+            } break;
+            case 4: {
+                if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+                    return ImGui::ColorPicker4(name, arr.data());
+                } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+                    return ImGui::ColorEdit4(name, arr.data());
+                }
+            } break;
+        }
+    }
+
     return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
 }
 
@@ -251,19 +256,10 @@ bool Input(const char* name, std::string& value)
 }
 
 #ifdef IMREFL_GLM
-bool Input(const char* name, glm::vec2& value)
+template <int Size, detail::arithmetic T, glm::qualifier Qual>
+bool Input(const char* name, glm::vec<Size, T, Qual>& value)
 {
-    return Input(name, std::span{&value[0], 2});
-}
-
-bool Input(const char* name, glm::vec3& value)
-{
-    return Input(name, std::span{&value[0], 3});
-}
-
-bool Input(const char* name, glm::vec4& value)
-{
-    return Input(name, std::span{&value[0], 4});
+    return Input(name, std::span{&value[0], Size});
 }
 #endif
 

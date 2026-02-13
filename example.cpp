@@ -29,6 +29,8 @@ struct player
 
     [[=ImRefl::color]]
     glm::vec4 rgba;
+
+    glm::ivec2 coords;
 };
 
 int main()
