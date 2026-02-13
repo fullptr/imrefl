@@ -12,15 +12,21 @@
 #include <map>
 #include <print>
 
-struct stats
+enum class weapon
 {
-    int count;
-    int level;
+    none, sword, bow, staff
 };
 
 struct entity
 {
-    std::optional<stats> player_stats = {};
+    std::string name;
+    bool invulnerable = false;
+    int health = 100;
+
+    [[=ImRefl::slider(1, 60)]]
+    int level = 14;
+
+    weapon current = weapon::sword;
 };
 
 int main()
