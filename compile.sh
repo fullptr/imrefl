@@ -13,6 +13,7 @@
   imgui/backends/imgui_impl_opengl3.cpp \
   -Iimgui \
   -Iimgui/backends \
+  -Iimgui/misc/cpp \
   -lglfw \
   -lGL \
   -lX11 \

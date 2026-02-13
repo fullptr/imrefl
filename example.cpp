@@ -12,19 +12,15 @@
 #include <map>
 #include <print>
 
-struct player
+struct stats
 {
-    [[=ImRefl::color]]
-    std::array<float, 3> color;
+    int count;
+    int level;
+};
 
-    int spacetime_coords[4];
-
-    glm::vec2 pos;
-
-    [[=ImRefl::color]]
-    glm::vec4 rgba;
-
-    glm::ivec2 coords;
+struct entity
+{
+    std::optional<stats> player_stats = {};
 };
 
 int main()
@@ -58,7 +54,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    player main_player = {};
+    entity player = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -67,7 +63,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Player", main_player);
+        ImRefl::Input("Settings", player);
         ImGui::End();
         ImGui::Render();
 

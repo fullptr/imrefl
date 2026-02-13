@@ -128,7 +128,47 @@ constexpr std::optional<minmax<T>> slider_limits()
 
 }
 
-template <typename T> bool Input(const char* name, T& val);
+// Input forward decls
+
+template <typename T>
+bool Input(const char* name, T& val);
+
+template <typename T> requires std::is_scoped_enum_v<T>
+bool Input(const char* name, T& value);
+
+template <detail::arithmetic T>
+bool Input(const char* name, T& val);
+
+bool Input(const char* name, char& c);
+bool Input(const char* name, long double& x);
+bool Input(const char* name, bool& value);
+
+template <detail::arithmetic T>
+bool Input(const char* name, std::span<T> arr);
+
+template <detail::arithmetic T, std::size_t N> requires (N > 0)
+bool Input(const char* name, T (&arr)[N]);
+
+template <detail::arithmetic T, std::size_t N> requires (N > 0)
+bool Input(const char* name, std::array<T, N>& arr);
+
+bool Input(const char* name, std::string& value);
+
+#ifdef IMREFL_GLM
+template <int Size, detail::arithmetic T, glm::qualifier Qual>
+bool Input(const char* name, glm::vec<Size, T, Qual>& value);
+#endif
+
+template <typename L, typename R>
+bool Input(const char* name, std::pair<L, R>& value);
+
+template <typename T>
+bool Input(const char* name, std::optional<T>& value);
+
+template <typename T> requires (std::meta::is_aggregate_type(^^T))
+bool Input(const char* name, T& x);
+
+// End of forward decls
 
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Input(const char* name, T& value)
@@ -148,8 +188,7 @@ bool Input(const char* name, T& value)
     return changed;
 }
 
-template <typename T>
-    requires std::integral<T> || std::floating_point<T>
+template <detail::arithmetic T>
 bool Input(const char* name, T& val)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
@@ -267,28 +306,14 @@ template <typename L, typename R>
 bool Input(const char* name, std::pair<L, R>& value)
 {
     ImGui::Text("%s", name);
-    char buffer[256] = {}; // This should be long enough for variable name
-    const auto name_length = std::strlen(name); 
-    if (name_length > sizeof(buffer) - 1 - 3) { // -1 for null terminator, -3 for ##L prefix
-        ImGui::Text("Cannot display variable '%s', name too long", name);
-        return false;
-    }
+
+    const auto width = ImGui::GetContentRegionAvail().x
+                     - ImGui::GetStyle().ItemSpacing.x;
+    ImGui::PushItemWidth(width / 2.0f);
+
     bool changed = false;
-    buffer[0] = '#';
-    buffer[1] = '#';
-
-    const auto half_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f;
-    ImGui::PushItemWidth(half_width);
-
-    buffer[2] = 'L';
-    std::memcpy(&buffer[3], name, std::strlen(name));
-    changed = changed || Input(buffer, value.first);
-
-    ImGui::SameLine();  // Both elements are on the same line
-
-    buffer[2] = 'R';
-    std::memcpy(&buffer[3], name, std::strlen(name));
-    changed = changed || Input(buffer, value.second);
+    changed = changed || Input("first", value.first);
+    changed = changed || Input("second", value.second);
 
     ImGui::PopItemWidth();
     return changed;
