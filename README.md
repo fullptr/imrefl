@@ -19,12 +19,14 @@ That's it! No macros or other setup needed!
 ### Supported types
 * Aggregate structs.
 * Enum classes.
-* All arithmetic types, including long double, and bool.
+* All arithmetic types including `long double`.
+* `bool` is rendered as a checkbox.
 * `char` is treated as a character rather than an 8 bit integer. 
 * `std::string`.
 * `std::pair<L, R>`.
 * `std::optional<T>`.
-* `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
+* `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
+* All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
 ### Annotations
@@ -34,11 +36,10 @@ That's it! No macros or other setup needed!
 | `ImRefl::ignore`           | Skips the data member when rendering the widget |
 | `ImRefl::readonly`         | Shows the field on the widget but makes it non-interactable |
 | `ImRefl::slider(min, max)` | Changes the visual style from a simple text input into a slider with the given limits. |
-| `ImRefl::color`            | Used for `glm::vec3` and `glm::vec4` to display as a color picker. |
-| `ImRegl::color_wheel`      | Similar to the above. |
+| `ImRefl::color`            | Renders the annotated field as a color picker. Works for 3 and 4 dimensional arrays and spans as well as `glm::vec3` and `glm::vec4`. |
+| `ImRegl::color_wheel`      | Similar to the above but a full color wheel. |
 
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
-* Arrays of arithmetic types, in particular of length 2, 3 and 4.
 * Support for third party types such as the GLM library.
 * More annotations for other ImGui visual styles and customisation points.

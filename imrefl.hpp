@@ -33,16 +33,8 @@ constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
 
 namespace detail {
 
-template <typename E> requires std::is_scoped_enum_v<E>
-constexpr const char* enum_to_string(E value)
-{
-    template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^E))) {
-        if (value == [:e:]) {
-            return std::meta::identifier_of(e).data();
-        }
-    }
-    return "<unnamed>";
-}
+template <typename T>
+concept arithmetic = std::integral<T> || std::floating_point<T>;
 
 template <typename E> requires std::is_scoped_enum_v<E>
 consteval auto enums_of()
@@ -55,6 +47,17 @@ consteval auto nsdm_of()
 {
     const auto ctx = std::meta::access_context::current();
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
+}
+
+template <typename E> requires std::is_scoped_enum_v<E>
+constexpr const char* enum_to_string(E value)
+{
+    template for (constexpr auto e : enums_of<E>()) { 
+        if (value == [:e:]) {
+            return std::meta::identifier_of(e).data();
+        }
+    }
+    return "<unnamed>";
 }
 
 template <typename T>
@@ -108,11 +111,10 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-template <typename T>
+template <detail::arithmetic T>
 struct minmax { T min, max; };
 
-template <typename T>
-    requires std::integral<T> || std::floating_point<T>
+template <detail::arithmetic T>
 constexpr std::optional<minmax<T>> slider_limits()
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();
@@ -187,6 +189,52 @@ bool Input(const char* name, bool& value)
     return ImGui::Checkbox(name, &value);
 }
 
+template <detail::arithmetic T>
+bool Input(const char* name, std::span<T> arr)
+{
+    if (arr.empty()) {
+        ImGui::Text("span '%s' is of length 0", name);
+        return false;
+    }
+
+    // Only floating point types permit the color options
+    if constexpr (std::floating_point<T>) {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        switch (arr.size()) {
+            case 3: {
+                if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+                    return ImGui::ColorPicker3(name, arr.data());
+                } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+                    return ImGui::ColorEdit3(name, arr.data());
+                }
+            } break;
+            case 4: {
+                if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
+                    return ImGui::ColorPicker4(name, arr.data());
+                } else if (storage->GetBool(ImGui::GetID("color"), false)) {
+                    return ImGui::ColorEdit4(name, arr.data());
+                }
+            } break;
+        }
+    }
+
+    return ImGui::InputScalarN(name, detail::num_type<T>(), arr.data(), arr.size());
+}
+
+template <detail::arithmetic T, std::size_t N>
+    requires (N > 0)
+bool Input(const char* name, T (&arr)[N])
+{
+    return Input(name, std::span<T>{arr, N});
+}
+
+template <detail::arithmetic T, std::size_t N>
+    requires (N > 0)
+bool Input(const char* name, std::array<T, N>& arr)
+{
+    return Input(name, std::span<T>{arr.begin(), arr.end()});
+}
+
 bool Input(const char* name, std::string& value)
 {
     auto callback = [](ImGuiInputTextCallbackData* data) -> int {
@@ -208,33 +256,10 @@ bool Input(const char* name, std::string& value)
 }
 
 #ifdef IMREFL_GLM
-bool Input(const char* name, glm::vec2& value)
+template <int Size, detail::arithmetic T, glm::qualifier Qual>
+bool Input(const char* name, glm::vec<Size, T, Qual>& value)
 {
-    return ImGui::InputFloat2(name, &value[0]);
-}
-
-bool Input(const char* name, glm::vec3& value)
-{
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-        return ImGui::ColorPicker3(name, &value[0]);
-    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-        return ImGui::ColorEdit3(name, &value[0]);
-    } else {
-        return ImGui::InputFloat3(name, &value[0]);
-    }
-}
-
-bool Input(const char* name, glm::vec4& value)
-{
-    ImGuiStorage* storage = ImGui::GetStateStorage();
-    if (storage->GetBool(ImGui::GetID("color_wheel"), false)) {
-        return ImGui::ColorPicker4(name, &value[0]);
-    } else if (storage->GetBool(ImGui::GetID("color"), false)) {
-        return ImGui::ColorEdit4(name, &value[0]);
-    } else {
-        return ImGui::InputFloat4(name, &value[0]);
-    }
+    return Input(name, std::span{&value[0], Size});
 }
 #endif
 
@@ -296,7 +321,7 @@ bool Input(const char* name, std::optional<T>& value)
     return changed;
 }
 
-template <typename T> requires std::is_aggregate_v<T>
+template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Input(const char* name, T& x)
 {
     ImGuiStorage* storage = ImGui::GetStateStorage();

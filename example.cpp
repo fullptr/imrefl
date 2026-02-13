@@ -12,20 +12,19 @@
 #include <map>
 #include <print>
 
-enum class weapon
-{
-    none,
-    sword,
-    bow,
-    staff,
-    wand,
-    axe
-};
-
 struct player
 {
-    std::optional<std::string> name = "Aragorn";
-    std::optional<weapon> main_hand = {};
+    [[=ImRefl::color]]
+    std::array<float, 3> color;
+
+    int spacetime_coords[4];
+
+    glm::vec2 pos;
+
+    [[=ImRefl::color]]
+    glm::vec4 rgba;
+
+    glm::ivec2 coords;
 };
 
 int main()
