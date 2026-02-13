@@ -33,9 +33,11 @@ That's it! No macros or other setup needed!
 
 | Annotation                 | Description                         |
 |----------------------------|-------------------------------------|
-| `ImRefl::ignore`           | Skips the data member when rendering the widget |
-| `ImRefl::readonly`         | Shows the field on the widget but makes it non-interactable |
-| `ImRefl::slider(min, max)` | Changes the visual style from a simple text input into a slider with the given limits. |
+| `ImRefl::ignore`           | Skips the data member when rendering the widget. |
+| `ImRefl::readonly`         | Shows the field on the widget but makes it non-interactable. |
+| `ImRefl::normal`           | Sets the visual style of arithmetic types (and arrays of) to a standard input box. This is the default option, but this is provided for consistency. |
+| `ImRefl::slider(min, max)` | Changes the visual style of arithmetic types (and arrays of) to a slider with the given limits. |
+| `ImRefl::drag(min, max, speed=1.0f)` | Changes the visual style of arithmetic types (and arrays of) to a dragger with the given limits and speed. |
 | `ImRefl::color`            | Renders the annotated field as a color picker. Works for 3 and 4 dimensional arrays and spans as well as `glm::vec3` and `glm::vec4`. |
 | `ImRegl::color_wheel`      | Similar to the above but a full color wheel. |
 

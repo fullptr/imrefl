@@ -19,8 +19,8 @@ enum class weapon
 
 struct entity
 {
-    std::string name;
-    bool invulnerable = false;
+    [[=ImRefl::normal]]
+    int foo = 200;
 
     [[=ImRefl::drag(0, 200)]]
     int health = 100;

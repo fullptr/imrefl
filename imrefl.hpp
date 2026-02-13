@@ -10,6 +10,7 @@
 #include <concepts>
 #include <type_traits>
 #include <optional>
+#include <variant>
 
 namespace ImRefl {
 
@@ -24,6 +25,12 @@ inline static constexpr Color color {};
 
 struct ColorWheel {};
 inline static constexpr ColorWheel color_wheel {};
+
+// The default "input" way to display a scalar. Not really
+// useful in exposing publicly but done so for consistency.
+// I would call this Input but that name is taken.
+struct Normal {};
+inline static constexpr Normal normal {};
 
 // TODO: Give this another think; should these be floats?
 // Or should we have slider() and sliderf(), which I don't really like.
@@ -42,10 +49,11 @@ struct Config
     bool color       = false;
     bool color_wheel = false;
 
-    // TODO: Make these a variant as they are mutually exclusive.
-    std::optional<Slider> slider = {};
-    std::optional<Drag> drag     = {};
+    std::variant<Normal, Slider, Drag> scalar_style = Normal{};
 };
+
+// Magic spell to make writing a variant visitor nicer.
+template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 
 template <typename T>
 concept arithmetic = std::integral<T> || std::floating_point<T>;
@@ -247,19 +255,24 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         }
     }
 
-    if (const auto& slider = config.slider) {
-        const auto min = static_cast<T>(slider->min);
-        const auto max = static_cast<T>(slider->max);
-        return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
-    } else if (const auto& drag = config.drag) {
-        const auto min = static_cast<T>(drag->min);
-        const auto max = static_cast<T>(drag->max);
-        const auto speed = drag->speed;
-        return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
-    } else {
-        const T step = 1; // Only used for integral types
-        return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
-    }
+    const auto visitor = overloaded{
+        [&](Normal) {
+            const T step = 1; // Only used for integral types
+            return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+        },
+        [&](Slider slider) {
+            const auto min = static_cast<T>(slider.min);
+            const auto max = static_cast<T>(slider.max);
+            return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+        },
+        [&](Drag drag) {
+            const auto min = static_cast<T>(drag.min);
+            const auto max = static_cast<T>(drag.max);
+            const auto speed = drag.speed;
+            return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+        }
+    };
+    return std::visit(visitor, config.scalar_style);
 }
 
 template <arithmetic T, std::size_t N>
@@ -360,11 +373,14 @@ bool Render(const char* name, T& x, const Config& config)
 
             if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
 
-            if constexpr (constexpr auto slider_info = fetch_annotation<Slider>(member)) {
-                new_config.slider = *slider_info;
+            if constexpr (constexpr auto style = fetch_annotation<Normal>(member)) {
+                new_config.scalar_style = *style;
             }
-            if constexpr (constexpr auto drag_info = fetch_annotation<Drag>(member)) {
-                new_config.drag = *drag_info;
+            if constexpr (constexpr auto style = fetch_annotation<Slider>(member)) {
+                new_config.scalar_style = *style;
+            }
+            if constexpr (constexpr auto style = fetch_annotation<Drag>(member)) {
+                new_config.scalar_style = *style;
             }
             if constexpr (has_annotation<ColorWheel>(member)) {
                 new_config.color_wheel = true;
