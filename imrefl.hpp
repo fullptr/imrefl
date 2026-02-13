@@ -356,6 +356,9 @@ bool Render(const char* name, T& x, const Config& config)
             if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
                 new_config.slider = *slider_info;
             }
+            if constexpr (constexpr auto drag_info = fetch_annotation<ImReflDrag>(member)) {
+                new_config.drag = *drag_info;
+            }
             if constexpr (has_annotation<ImReflColorWheel>(member)) {
                 new_config.color_wheel = true;
             }
