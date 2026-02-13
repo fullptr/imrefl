@@ -181,14 +181,7 @@ bool Render(const char* name, T& value, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config)
 {
-    if (const auto& slider = config.slider) {
-        const auto min = static_cast<T>(slider->min);
-        const auto max = static_cast<T>(slider->max);
-        return ImGui::SliderScalar(name, num_type<T>(), &val, &min, &max);
-    } else {
-        const T step = 1; // Only used for integral types
-        return ImGui::InputScalarN(name, num_type<T>(), &val, 1, std::integral<T> ? &step : nullptr);
-    }
+    return Render(name, std::span<T>{&val, 1}, config);
 }
 
 // Treat char as a single character string, rather than an integral
@@ -227,8 +220,8 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         return false;
     }
 
-    // Only floating point types permit the color options
-    if constexpr (std::floating_point<T>) {
+    // Only float permits the color options
+    if constexpr (^^T == ^^float) {
         switch (arr.size()) {
             case 3: {
                 if (config.color_wheel) {
@@ -247,7 +240,14 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         }
     }
 
-    return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size());
+    if (const auto& slider = config.slider) {
+        const auto min = static_cast<T>(slider->min);
+        const auto max = static_cast<T>(slider->max);
+        return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+    } else {
+        const T step = 1; // Only used for integral types
+        return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+    }
 }
 
 template <arithmetic T, std::size_t N>
