@@ -13,36 +13,38 @@
 
 namespace ImRefl {
 
-struct ImReflIgnore {};
-inline static constexpr ImReflIgnore ignore {};
+struct Ignore {};
+inline static constexpr Ignore ignore {};
 
-struct ImReflReadonly {};
-inline static constexpr ImReflReadonly readonly {};
+struct Readonly {};
+inline static constexpr Readonly readonly {};
 
-struct ImReflColor {};
-inline static constexpr ImReflColor color {};
+struct Color {};
+inline static constexpr Color color {};
 
-struct ImReflColorWheel {};
-inline static constexpr ImReflColorWheel color_wheel {};
+struct ColorWheel {};
+inline static constexpr ColorWheel color_wheel {};
 
 // TODO: Give this another think; should these be floats?
 // Or should we have slider() and sliderf(), which I don't really like.
-struct ImReflSlider { int min; int max; };
-constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
+struct Slider { int min; int max; };
+constexpr Slider slider(int min, int max) { return {min, max}; }
 
 // TODO: Same todo as the above, but speed is always a float
 // since that is what ImGui supports.
-struct ImReflDrag { int min; int max; };
-constexpr ImReflDrag drag(int min, int max) { return {min, max}; }
+struct Drag { int min; int max; float speed; };
+constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
 
 namespace detail {
 
 struct Config
 {
-    bool color                         = false;
-    bool color_wheel                   = false;
-    std::optional<ImReflSlider> slider = {};
-    std::optional<ImReflDrag> drag     = {};
+    bool color       = false;
+    bool color_wheel = false;
+
+    // TODO: Make these a variant as they are mutually exclusive.
+    std::optional<Slider> slider = {};
+    std::optional<Drag> drag     = {};
 };
 
 template <typename T>
@@ -249,6 +251,11 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         const auto min = static_cast<T>(slider->min);
         const auto max = static_cast<T>(slider->max);
         return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+    } else if (const auto& drag = config.drag) {
+        const auto min = static_cast<T>(drag->min);
+        const auto max = static_cast<T>(drag->max);
+        const auto speed = drag->speed;
+        return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
     } else {
         const T step = 1; // Only used for integral types
         return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
@@ -348,26 +355,26 @@ bool Render(const char* name, T& x, const Config& config)
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : nsdm_of<T>()) {
-        if constexpr (!has_annotation<ImReflIgnore>(member)) {
+        if constexpr (!has_annotation<Ignore>(member)) {
             Config new_config = config;
 
-            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
+            if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
 
-            if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
+            if constexpr (constexpr auto slider_info = fetch_annotation<Slider>(member)) {
                 new_config.slider = *slider_info;
             }
-            if constexpr (constexpr auto drag_info = fetch_annotation<ImReflDrag>(member)) {
+            if constexpr (constexpr auto drag_info = fetch_annotation<Drag>(member)) {
                 new_config.drag = *drag_info;
             }
-            if constexpr (has_annotation<ImReflColorWheel>(member)) {
+            if constexpr (has_annotation<ColorWheel>(member)) {
                 new_config.color_wheel = true;
             }
-            if constexpr (has_annotation<ImReflColor>(member)) {
+            if constexpr (has_annotation<Color>(member)) {
                 new_config.color = true;
             }
 
             changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
-            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::EndDisabled(); }
+            if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
         }
     }
 
