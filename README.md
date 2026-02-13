@@ -26,7 +26,7 @@ That's it! No macros or other setup needed!
 * `std::pair<L, R>`.
 * `std::optional<T>`.
 * `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
-* `glm::vec2`, `glm::vec3` and `glm::vec4` from the GLM graphics library. 
+* All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
 ### Annotations

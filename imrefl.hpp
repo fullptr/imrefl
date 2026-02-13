@@ -37,17 +37,6 @@ template <typename T>
 concept arithmetic = std::integral<T> || std::floating_point<T>;
 
 template <typename E> requires std::is_scoped_enum_v<E>
-constexpr const char* enum_to_string(E value)
-{
-    template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^E))) {
-        if (value == [:e:]) {
-            return std::meta::identifier_of(e).data();
-        }
-    }
-    return "<unnamed>";
-}
-
-template <typename E> requires std::is_scoped_enum_v<E>
 consteval auto enums_of()
 {
     return std::define_static_array(std::meta::enumerators_of(^^E));
@@ -58,6 +47,17 @@ consteval auto nsdm_of()
 {
     const auto ctx = std::meta::access_context::current();
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
+}
+
+template <typename E> requires std::is_scoped_enum_v<E>
+constexpr const char* enum_to_string(E value)
+{
+    template for (constexpr auto e : enums_of<E>()) { 
+        if (value == [:e:]) {
+            return std::meta::identifier_of(e).data();
+        }
+    }
+    return "<unnamed>";
 }
 
 template <typename T>

@@ -12,20 +12,14 @@
 #include <map>
 #include <print>
 
-enum class weapon
-{
-    none,
-    sword,
-    bow,
-    staff,
-    wand,
-    axe
-};
-
 struct player
 {
+    [[=ImRefl::color]]
+    std::array<float, 3> color;
+
+    int spacetime_coords[4];
+
     glm::vec2 pos;
-    glm::vec3 colour;
 
     [[=ImRefl::color]]
     glm::vec4 rgba;
