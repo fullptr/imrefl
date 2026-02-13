@@ -58,7 +58,8 @@ template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; }
 template <typename T>
 concept arithmetic = std::integral<T> || std::floating_point<T>;
 
-template <typename E> requires std::is_scoped_enum_v<E>
+template <typename E>
+    requires std::is_scoped_enum_v<E>
 consteval auto enums_of()
 {
     return std::define_static_array(std::meta::enumerators_of(^^E));
@@ -361,7 +362,8 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
     return changed;
 }
 
-template <typename T> requires (std::meta::is_aggregate_type(^^T))
+template <typename T>
+    requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, const Config& config)
 {
     bool changed = false;
