@@ -45,12 +45,16 @@ constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, sp
 struct String {};
 inline static constexpr String string {};
 
+struct Radio {};
+inline static constexpr Radio radio {};
+
 namespace detail {
 
 struct Config
 {
     bool color       = false;
     bool color_wheel = false;
+    bool radio       = false;
     bool is_string   = false; // used for formatting char buffers
 
     std::variant<Normal, Slider, Drag> scalar_style = Normal{};
@@ -170,6 +174,9 @@ constexpr Config get_config()
     if constexpr (has_annotation<Color>(info)) {
         config.color = true;
     }
+    if constexpr (has_annotation<Radio>(info)) {
+        config.radio = true;
+    }
     if constexpr (has_annotation<String>(info)) {
         config.is_string = true;
     }
@@ -222,17 +229,29 @@ bool Render(const char* name, T& x, const Config& config);
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, T& value, const Config& config)
 {
-    const auto valueName = enum_to_string(value);
     bool changed = false;
-    if (ImGui::BeginCombo(name, valueName)) {
+    if (config.radio) {
+        ImGui::Text("%s", name);
         template for (constexpr auto e : enums_of<T>()) {
-            constexpr auto enumName = std::meta::identifier_of(e);
-            if (ImGui::Selectable(enumName.data(), value == [:e:])) {
+            constexpr auto enum_name = std::meta::identifier_of(e);
+            ImGui::SameLine();
+            if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
                 value = [:e:];
                 changed = true;
             }
         }
-        ImGui::EndCombo();
+    } else {
+        const auto value_name = enum_to_string(value);
+        if (ImGui::BeginCombo(name, value_name)) {
+            template for (constexpr auto e : enums_of<T>()) {
+                constexpr auto enum_name = std::meta::identifier_of(e);
+                if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
+                    value = [:e:];
+                    changed = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
     }
     return changed;
 }
