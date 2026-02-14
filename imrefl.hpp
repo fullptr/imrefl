@@ -436,13 +436,39 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
 template <typename... Ts>
 struct Tag {};
 
+consteval auto integer_sequence(std::size_t max)
+{
+    std::vector<std::size_t> values;
+    for (std::size_t i = 0; i != max; ++i) {
+        values.push_back(i);
+    }
+    return std::define_static_array(values);
+}
+
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
-    template for (constexpr auto x : std::define_static_array(std::meta::template_arguments_of(^^Tag<Ts...>))) {
-        ImGui::Text("Element");
+    bool changed = false;
+    ImGui::Text("%s", name);
+    ImGui::PushID(name);
+    if (ImGui::BeginCombo(name, "tba")) {
+        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            ImGui::PushID(index);
+            if (ImGui::Selectable("element")) {
+                value.template emplace<index>();
+                changed = true;
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
     }
-    return true;
+    ImGui::PopID();
+    template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+        if (index == value.index()) {
+            changed = changed || Render(name, std::get<index>(value), config);
+        }
+    }
+    return changed;
 }
 
 template <typename T>

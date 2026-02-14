@@ -13,7 +13,7 @@
 #include <print>
 
 struct entity {
-    std::variant<int, float, std::string> data;
+    std::variant<int, float, std::string> data = std::string{"foo"};
 };
 
 int main()
