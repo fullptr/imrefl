@@ -14,16 +14,10 @@
 
 struct entity
 {
-    int favourite_numer = 12;  // Uses InputScalar
+    [[=ImRefl::string]]
+    char name[64] = {};
 
-    [[=ImRefl::normal]]  // Uses InputScalar, the default 
-    int age = 16;
-
-    [[=ImRefl::drag(0, 200)]]  // Uses DragScalar
-    int health = 100;
-
-    [[=ImRefl::slider(0, 1)]]
-    float unit_coords[3] = {};  // Uses SliderScalar
+    char bytes[3] = {};
 };
 
 int main()
