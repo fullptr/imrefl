@@ -28,6 +28,7 @@ That's it! No macros or other setup needed!
 * `std::pair<L, R>`.
 * `std::optional<T>`.
 * `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
+* `std::variant<Ts...>` - however this can be improved; it currently uses typeid to get the type names, which can be hard to read.
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 

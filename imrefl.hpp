@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <optional>
 #include <variant>
+#include <typeinfo>
 
 namespace ImRefl {
 
@@ -221,6 +222,9 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config);
 template <typename T>
 bool Render(const char* name, std::optional<T>& value, const Config& config);
 
+template <typename... Ts>
+bool Render(const char* name, std::variant<Ts...>& value, const Config& config);
+
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, const Config& config);
 
@@ -427,6 +431,48 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
         }
     }
     ImGui::PopID();
+    return changed;
+}
+
+template <typename... Ts>
+struct Tag {};
+
+consteval auto integer_sequence(std::size_t max)
+{
+    std::vector<std::size_t> values;
+    for (std::size_t i = 0; i != max; ++i) {
+        values.push_back(i);
+    }
+    return std::define_static_array(values);
+}
+
+template <typename... Ts>
+bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
+{
+    // TODO: Come up with a C++26 reflection implementation of the type name.
+    // Sadly it is still a non-trivial exercise.
+    static const char* type_names[] = { typeid(Ts).name()... };
+
+    bool changed = false;
+    ImGui::Text("%s", name);
+    ImGui::PushID(name);
+    if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            ImGui::PushID(index);
+            if (ImGui::Selectable(type_names[index])) {
+                value.template emplace<index>();
+                changed = true;
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::PopID();
+    template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+        if (index == value.index()) {
+            changed = changed || Render("##combo_box_element", std::get<index>(value), config);
+        }
+    }
     return changed;
 }
 

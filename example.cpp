@@ -12,24 +12,12 @@
 #include <map>
 #include <print>
 
-enum class weapon
-{
-    none, sword, staff, wand, axe, bow
-};
-
-struct entity
-{
-    std::string name = "Gandalf";
-
-    [[=ImRefl::radio]]
-    weapon left_hand = weapon::staff;
-
-    weapon right_hand = weapon::sword;
+struct entity {
+    std::variant<int, float, std::string> data = std::string{"foo"};
 };
 
 int main()
 {
-    std::print("{}\n", sizeof(int));
     glfwSetErrorCallback([](int err, const char* desc) {
         std::println("GLFW error {}: {}", err, desc);
     });
