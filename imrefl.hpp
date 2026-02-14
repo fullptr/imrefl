@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <optional>
 #include <variant>
+#include <typeinfo>
 
 namespace ImRefl {
 
@@ -448,13 +449,17 @@ consteval auto integer_sequence(std::size_t max)
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
+    // TODO: Come up with a C++26 reflection implementation of the type name.
+    // Sadly it is still a non-trivial exercise.
+    static const char* type_names[] = { typeid(Ts).name()... };
+
     bool changed = false;
     ImGui::Text("%s", name);
     ImGui::PushID(name);
-    if (ImGui::BeginCombo(name, "tba")) {
+    if (ImGui::BeginCombo(name, type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
             ImGui::PushID(index);
-            if (ImGui::Selectable("element")) {
+            if (ImGui::Selectable(type_names[index])) {
                 value.template emplace<index>();
                 changed = true;
             }
