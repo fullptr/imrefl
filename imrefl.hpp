@@ -10,40 +10,56 @@
 #include <concepts>
 #include <type_traits>
 #include <optional>
+#include <variant>
 
 namespace ImRefl {
 
-struct ImReflIgnore {};
-inline static constexpr ImReflIgnore ignore {};
+struct Ignore {};
+inline static constexpr Ignore ignore {};
 
-struct ImReflReadonly {};
-inline static constexpr ImReflReadonly readonly {};
+struct Readonly {};
+inline static constexpr Readonly readonly {};
 
-struct ImReflColor {};
-inline static constexpr ImReflColor color {};
+struct Color {};
+inline static constexpr Color color {};
 
-struct ImReflColorWheel {};
-inline static constexpr ImReflColorWheel color_wheel {};
+struct ColorWheel {};
+inline static constexpr ColorWheel color_wheel {};
 
-// TODO: Give this another think, it would be great for this to hold the
-// correct type, but the interface should be as simple as slider(min, max) for
-// every type.
-struct ImReflSlider { int min; int max; };
-constexpr ImReflSlider slider(int min, int max) { return {min, max}; }
+// The default "input" way to display a scalar. Not really
+// useful in exposing publicly but done so for consistency.
+// I would call this Input but that name is taken.
+struct Normal {};
+inline static constexpr Normal normal {};
+
+// TODO: Give this another think; should these be floats?
+// Or should we have slider() and sliderf(), which I don't really like.
+struct Slider { int min; int max; };
+constexpr Slider slider(int min, int max) { return {min, max}; }
+
+// TODO: Same todo as the above, but speed is always a float
+// since that is what ImGui supports.
+struct Drag { int min; int max; float speed; };
+constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
 
 namespace detail {
 
 struct Config
 {
-    bool color                         = false;
-    bool color_wheel                   = false;
-    std::optional<ImReflSlider> slider = {};
+    bool color       = false;
+    bool color_wheel = false;
+
+    std::variant<Normal, Slider, Drag> scalar_style = Normal{};
 };
+
+// Magic spell to make writing a variant visitor nicer.
+template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 
 template <typename T>
 concept arithmetic = std::integral<T> || std::floating_point<T>;
 
-template <typename E> requires std::is_scoped_enum_v<E>
+template <typename E>
+    requires std::is_scoped_enum_v<E>
 consteval auto enums_of()
 {
     return std::define_static_array(std::meta::enumerators_of(^^E));
@@ -116,6 +132,43 @@ consteval auto num_type()
         case 8: return ImGuiDataType_Double;
     }
     throw "unknown floating point size";
+}
+
+// Ensures that the given meta::info has exactly one of the arithmetic
+// visual styles, or none.
+consteval bool check_arithmetic_style(std::meta::info info)
+{
+    std::size_t style_count = 0;
+    if (has_annotation<Normal>(info)) { ++style_count; }
+    if (has_annotation<Slider>(info)) { ++style_count; }
+    if (has_annotation<Drag>(info))   { ++style_count; }
+    return style_count < 2;
+}
+
+// Given an existing config, create a new one from it, overriding fields
+// with any annotations found on the given meta::info.
+template <std::meta::info info>
+constexpr Config get_new_config(Config config)
+{
+    static_assert(check_arithmetic_style(info), "too many visual styles given for arithmetic type");
+
+    if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (constexpr auto style = fetch_annotation<Slider>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (constexpr auto style = fetch_annotation<Drag>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (has_annotation<ColorWheel>(info)) {
+        config.color_wheel = true;
+    }
+    if constexpr (has_annotation<Color>(info)) {
+        config.color = true;
+    }
+
+    return config;
 }
 
 // Forward decls
@@ -240,14 +293,24 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         }
     }
 
-    if (const auto& slider = config.slider) {
-        const auto min = static_cast<T>(slider->min);
-        const auto max = static_cast<T>(slider->max);
-        return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
-    } else {
-        const T step = 1; // Only used for integral types
-        return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
-    }
+    const auto visitor = overloaded{
+        [&](Normal) {
+            const T step = 1; // Only used for integral types
+            return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+        },
+        [&](Slider slider) {
+            const auto min = static_cast<T>(slider.min);
+            const auto max = static_cast<T>(slider.max);
+            return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+        },
+        [&](Drag drag) {
+            const auto min = static_cast<T>(drag.min);
+            const auto max = static_cast<T>(drag.max);
+            const auto speed = drag.speed;
+            return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+        }
+    };
+    return std::visit(visitor, config.scalar_style);
 }
 
 template <arithmetic T, std::size_t N>
@@ -336,30 +399,20 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
     return changed;
 }
 
-template <typename T> requires (std::meta::is_aggregate_type(^^T))
+template <typename T>
+    requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, const Config& config)
 {
     bool changed = false;
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : nsdm_of<T>()) {
-        if constexpr (!has_annotation<ImReflIgnore>(member)) {
-            Config new_config = config;
+        if constexpr (!has_annotation<Ignore>(member)) {
+            const Config new_config = get_new_config<member>(config);
 
-            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::BeginDisabled(); }
-
-            if constexpr (constexpr auto slider_info = fetch_annotation<ImReflSlider>(member)) {
-                new_config.slider = *slider_info;
-            }
-            if constexpr (has_annotation<ImReflColorWheel>(member)) {
-                new_config.color_wheel = true;
-            }
-            if constexpr (has_annotation<ImReflColor>(member)) {
-                new_config.color = true;
-            }
-
+            if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
             changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
-            if constexpr (has_annotation<ImReflReadonly>(member)) { ImGui::EndDisabled(); }
+            if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
         }
     }
 
