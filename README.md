@@ -2,6 +2,8 @@
 
 A library utilising C++26 reflection features to generate ImGui rendering code at compile time for structs without the need for macro magic or addional boilerplate.
 
+This library is still very much of a proof-of-concept, and the interface will be unstable while I experiment with the ergonomics.
+
 ![Example Image](images/imrefl.png)
 
 Simply include the header, declare your types and call `ImRefl::Input`:
