@@ -134,6 +134,30 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
+// Given an existing config, create a new one from it, overriding fields
+// with any annotations found on the given meta::info.
+template <std::meta::info info>
+constexpr Config get_new_config(Config config)
+{
+    if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (constexpr auto style = fetch_annotation<Slider>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (constexpr auto style = fetch_annotation<Drag>(info)) {
+        config.scalar_style = *style;
+    }
+    if constexpr (has_annotation<ColorWheel>(info)) {
+        config.color_wheel = true;
+    }
+    if constexpr (has_annotation<Color>(info)) {
+        config.color = true;
+    }
+
+    return config;
+}
+
 // Forward decls
 
 template <typename T>
@@ -371,26 +395,9 @@ bool Render(const char* name, T& x, const Config& config)
     ImGui::Text("%s", name);
     template for (constexpr auto member : nsdm_of<T>()) {
         if constexpr (!has_annotation<Ignore>(member)) {
-            Config new_config = config;
+            const Config new_config = get_new_config<member>(config);
 
             if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
-
-            if constexpr (constexpr auto style = fetch_annotation<Normal>(member)) {
-                new_config.scalar_style = *style;
-            }
-            if constexpr (constexpr auto style = fetch_annotation<Slider>(member)) {
-                new_config.scalar_style = *style;
-            }
-            if constexpr (constexpr auto style = fetch_annotation<Drag>(member)) {
-                new_config.scalar_style = *style;
-            }
-            if constexpr (has_annotation<ColorWheel>(member)) {
-                new_config.color_wheel = true;
-            }
-            if constexpr (has_annotation<Color>(member)) {
-                new_config.color = true;
-            }
-
             changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
             if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
         }
