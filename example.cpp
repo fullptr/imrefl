@@ -1,6 +1,7 @@
 #include <imgui.h>
 #define IMREFL_GLM
 #include "imrefl.hpp"
+#include "ImReflect.hpp"
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -12,16 +13,19 @@
 #include <map>
 #include <print>
 
-struct health_component
+enum class weapon
 {
-    uint8_t health = 100;
-    bool    invulnerable = false;
+    none, sword, staff, wand, axe, bow
 };
 
 struct entity
 {
-    std::string name = "Matt";
-    std::optional<health_component> health = health_component{120, true};
+    std::string name = "Gandalf";
+
+    [[=ImRefl::radio]]
+    weapon left_hand = weapon::staff;
+
+    weapon right_hand = weapon::sword;
 };
 
 int main()
