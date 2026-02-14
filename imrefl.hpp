@@ -456,7 +456,7 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     bool changed = false;
     ImGui::Text("%s", name);
     ImGui::PushID(name);
-    if (ImGui::BeginCombo(name, type_names[value.index()])) {
+    if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
             ImGui::PushID(index);
             if (ImGui::Selectable(type_names[index])) {
@@ -470,7 +470,7 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     ImGui::PopID();
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = changed || Render(name, std::get<index>(value), config);
+            changed = changed || Render("##combo_box_element", std::get<index>(value), config);
         }
     }
     return changed;
