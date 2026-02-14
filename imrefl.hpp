@@ -149,13 +149,12 @@ consteval bool check_arithmetic_style(std::meta::info info)
     return style_count < 2;
 }
 
-// Given an existing config, create a new one from it, overriding fields
-// with any annotations found on the given meta::info.
 template <std::meta::info info>
-constexpr Config get_new_config(Config config)
+constexpr Config get_config()
 {
     static_assert(check_arithmetic_style(info), "too many visual styles given for arithmetic type");
 
+    Config config;
     if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
         config.scalar_style = *style;
     }
@@ -405,7 +404,7 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
             changed = true;
         } else {
             ImGui::SameLine();
-            ImGui::Text("%s", name, config);
+            ImGui::Text("%s", name);
         }
     }
     ImGui::PopID();
@@ -414,14 +413,15 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
 
 template <typename T>
     requires (std::meta::is_aggregate_type(^^T))
-bool Render(const char* name, T& x, const Config& config)
+bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
 {
     bool changed = false;
 
     ImGui::Text("%s", name);
     template for (constexpr auto member : nsdm_of<T>()) {
         if constexpr (!has_annotation<Ignore>(member)) {
-            const Config new_config = get_new_config<member>(config);
+            // Previous config does not propagate down to the current struct
+            const Config new_config = get_config<member>();
 
             if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
             changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
