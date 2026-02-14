@@ -41,6 +41,7 @@ That's it! No macros or other setup needed!
 | `ImRefl::color`            | Renders the annotated field as a color picker. Works for 3 and 4 dimensional arrays and spans as well as `glm::vec3` and `glm::vec4`. |
 | `ImRefl::color_wheel`      | Similar to the above but a full color wheel. |
 | `ImRefl::string` | For C-style char arrays, formats them as a fixed size string rather than a set of values. |
+| `ImRefl::radio` | For enum classes. Displays the enum as a series of radio buttons rather than a dropdown. | 
 
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
