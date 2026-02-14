@@ -12,12 +12,16 @@
 #include <map>
 #include <print>
 
+struct health_component
+{
+    uint8_t health = 100;
+    bool    invulnerable = false;
+};
+
 struct entity
 {
-    [[=ImRefl::string]]
-    char name[64] = {};
-
-    char bytes[3] = {};
+    std::string name = "Matt";
+    std::optional<health_component> health = health_component{120, true};
 };
 
 int main()
