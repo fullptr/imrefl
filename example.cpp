@@ -12,21 +12,18 @@
 #include <map>
 #include <print>
 
-enum class weapon
-{
-    none, sword, bow, staff
-};
-
 struct entity
 {
-    [[=ImRefl::normal]]
-    int foo = 200;
+    int favourite_numer = 12;  // Uses InputScalar
 
-    [[=ImRefl::drag(0, 200)]]
+    [[=ImRefl::normal]]  // Uses InputScalar, the default 
+    int age = 16;
+
+    [[=ImRefl::drag(0, 200)]]  // Uses DragScalar
     int health = 100;
 
     [[=ImRefl::slider(0, 1)]]
-    float coords[3] = {};
+    float unit_coords[3] = {};  // Uses SliderScalar
 };
 
 int main()
