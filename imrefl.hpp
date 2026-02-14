@@ -42,12 +42,16 @@ constexpr Slider slider(int min, int max) { return {min, max}; }
 struct Drag { int min; int max; float speed; };
 constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
 
+struct String {};
+inline static constexpr String string {};
+
 namespace detail {
 
 struct Config
 {
     bool color       = false;
     bool color_wheel = false;
+    bool is_string   = false; // used for formatting char buffers
 
     std::variant<Normal, Slider, Drag> scalar_style = Normal{};
 };
@@ -167,6 +171,9 @@ constexpr Config get_new_config(Config config)
     if constexpr (has_annotation<Color>(info)) {
         config.color = true;
     }
+    if constexpr (has_annotation<String>(info)) {
+        config.is_string = true;
+    }
 
     return config;
 }
@@ -271,6 +278,12 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
     if (arr.empty()) {
         ImGui::Text("span '%s' is of length 0", name);
         return false;
+    }
+
+    if constexpr (^^T == ^^char) {
+        if (config.is_string) {
+            return ImGui::InputText(name, arr.data(), arr.size());
+        }
     }
 
     // Only float permits the color options
