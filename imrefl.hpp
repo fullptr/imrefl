@@ -134,11 +134,24 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
+// Ensures that the given meta::info has exactly one of the arithmetic
+// visual styles, or none.
+consteval bool check_arithmetic_style(std::meta::info info)
+{
+    std::size_t style_count = 0;
+    if (has_annotation<Normal>(info)) { ++style_count; }
+    if (has_annotation<Slider>(info)) { ++style_count; }
+    if (has_annotation<Drag>(info))   { ++style_count; }
+    return style_count < 2;
+}
+
 // Given an existing config, create a new one from it, overriding fields
 // with any annotations found on the given meta::info.
 template <std::meta::info info>
 constexpr Config get_new_config(Config config)
 {
+    static_assert(check_arithmetic_style(info), "too many visual styles given for arithmetic type");
+
     if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
         config.scalar_style = *style;
     }
