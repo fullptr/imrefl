@@ -1,7 +1,6 @@
 #include <imgui.h>
 #define IMREFL_GLM
 #include "imrefl.hpp"
-#include "ImReflect.hpp"
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -13,24 +12,14 @@
 #include <map>
 #include <print>
 
-enum class weapon
-{
-    none, sword, staff, wand, axe, bow
-};
-
 struct entity
 {
-    std::string name = "Gandalf";
-
-    [[=ImRefl::radio]]
-    weapon left_hand = weapon::staff;
-
-    weapon right_hand = weapon::sword;
+    int x;
+    //std::variant<int, float, std::string> data;
 };
 
 int main()
 {
-    std::print("{}\n", sizeof(int));
     glfwSetErrorCallback([](int err, const char* desc) {
         std::println("GLFW error {}: {}", err, desc);
     });

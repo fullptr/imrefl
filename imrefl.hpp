@@ -221,6 +221,9 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config);
 template <typename T>
 bool Render(const char* name, std::optional<T>& value, const Config& config);
 
+template <typename... Ts>
+bool Render(const char* name, std::variant<Ts...>& value, const Config& config);
+
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, const Config& config);
 
@@ -428,6 +431,24 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
     }
     ImGui::PopID();
     return changed;
+}
+
+template <typename... Ts>
+consteval std::vector<std::meta::info> get_types()
+{
+    std::vector<std::meta::info> ret;
+    (ret.push_back(^^Ts), ...);
+    return ret;
+}
+
+template <typename... Ts>
+bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
+{
+    template for (constexpr auto member : std::define_static_array(get_types<Ts...>())) {
+        //ImGui::Text("%s", std::meta::identifier_of(member));
+        ImGui::Text("Element");
+    }
+    return true;
 }
 
 template <typename T>
