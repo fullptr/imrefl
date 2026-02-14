@@ -12,10 +12,8 @@
 #include <map>
 #include <print>
 
-struct entity
-{
-    int x;
-    //std::variant<int, float, std::string> data;
+struct entity {
+    std::variant<int, float, std::string> data;
 };
 
 int main()

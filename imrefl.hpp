@@ -434,18 +434,12 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
 }
 
 template <typename... Ts>
-consteval std::vector<std::meta::info> get_types()
-{
-    std::vector<std::meta::info> ret;
-    (ret.push_back(^^Ts), ...);
-    return ret;
-}
+struct Tag {};
 
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
-    template for (constexpr auto member : std::define_static_array(get_types<Ts...>())) {
-        //ImGui::Text("%s", std::meta::identifier_of(member));
+    template for (constexpr auto x : std::define_static_array(std::meta::template_arguments_of(^^Tag<Ts...>))) {
         ImGui::Text("Element");
     }
     return true;
