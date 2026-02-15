@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #endif
 
-#include <experimental/meta>
+#include <meta>
 #include <print>
 #include <format>
 #include <concepts>
@@ -96,7 +96,7 @@ template <typename T>
 consteval std::optional<T> fetch_annotation(std::meta::info info)
 {
     for (const auto a : std::meta::annotations_of(info)) {
-        if (std::meta::type_of(a) == ^^T) {
+        if (std::meta::remove_cvref(std::meta::type_of(a)) == std::meta::remove_cvref(^^T)) {
             return std::meta::extract<T>(a);
         }
     }
