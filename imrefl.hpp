@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #endif
 
-#include <experimental/meta>
+#include <meta>
 #include <print>
 #include <format>
 #include <concepts>
