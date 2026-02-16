@@ -408,15 +408,10 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config)
     ImGuiID guard{name};
     ImGui::Text("%s", name);
 
-    const auto width = ImGui::GetContentRegionAvail().x
-                     - ImGui::GetStyle().ItemSpacing.x;
-    ImGui::PushItemWidth(width / 2.0f);
-
     bool changed = false;
     changed = changed || Render("first", value.first, config);
     changed = changed || Render("second", value.second, config);
 
-    ImGui::PopItemWidth();
     return changed;
 }
 
