@@ -13,7 +13,8 @@
 #include <print>
 
 struct entity {
-    std::variant<int, float, std::string> data = std::string{"foo"};
+    std::pair<int, float> p1;
+    std::pair<int, float> p2;
 };
 
 int main()
