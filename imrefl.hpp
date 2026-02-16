@@ -51,6 +51,17 @@ inline static constexpr Radio radio {};
 
 namespace detail {
 
+struct ImGuiID
+{
+    ImGuiID(const char* id) { ImGui::PushID(id); }
+    ImGuiID(std::size_t id) { ImGui::PushID(id); }
+    ImGuiID(const ImGuiID&) = delete;
+    ImGuiID& operator=(const ImGuiID&) = delete;
+    ImGuiID(ImGuiID&&) = delete;
+    ImGuiID& operator=(ImGuiID&&) = delete;
+    ~ImGuiID() { ImGui::PopID(); }
+};
+
 struct Config
 {
     bool color       = false;
@@ -233,6 +244,7 @@ bool Render(const char* name, T& x, const Config& config);
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, T& value, const Config& config)
 {
+    ImGuiID guard{name};
     bool changed = false;
     if (config.radio) {
         ImGui::Text("%s", name);
@@ -393,6 +405,7 @@ bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& conf
 template <typename L, typename R>
 bool Render(const char* name, std::pair<L, R>& value, const Config& config)
 {
+    ImGuiID guard{name};
     ImGui::Text("%s", name);
 
     bool changed = false;
@@ -405,8 +418,8 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config)
 template <typename T>
 bool Render(const char* name, std::optional<T>& value, const Config& config)
 {
+    ImGuiID guard{name};
     bool changed = false;
-    ImGui::PushID(name);
     if (value.has_value()) {
         if (ImGui::Button("Delete")) {
             value = {};
@@ -425,7 +438,6 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
             ImGui::Text("%s", name);
         }
     }
-    ImGui::PopID();
     return changed;
 }
 
@@ -444,28 +456,27 @@ consteval auto integer_sequence(std::size_t max)
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
+    ImGuiID guard{name};
+
     // TODO: Come up with a C++26 reflection implementation of the type name.
     // Sadly it is still a non-trivial exercise.
     static const char* type_names[] = { typeid(Ts).name()... };
 
     bool changed = false;
     ImGui::Text("%s", name);
-    ImGui::PushID(name);
     if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-            ImGui::PushID(index);
+            ImGuiID id{index};
             if (ImGui::Selectable(type_names[index])) {
                 value.template emplace<index>();
                 changed = true;
             }
-            ImGui::PopID();
         }
         ImGui::EndCombo();
     }
-    ImGui::PopID();
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = changed || Render("##combo_box_element", std::get<index>(value), config);
+            changed = changed || Render("", std::get<index>(value), config);
         }
     }
     return changed;
@@ -475,6 +486,7 @@ template <typename T>
     requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
 {
+    ImGuiID guard{name};
     bool changed = false;
 
     ImGui::Text("%s", name);

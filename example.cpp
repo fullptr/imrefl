@@ -10,6 +10,8 @@
 
 #include <print>
 
+enum class pet { cat, dog, dragon };
+
 struct entity {
     std::pair<int, float> p1;
     std::pair<int, float> p2;
