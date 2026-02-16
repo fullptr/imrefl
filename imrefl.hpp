@@ -481,7 +481,7 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     }
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = changed || Render("##combo_box_element", std::get<index>(value), config);
+            changed = changed || Render("", std::get<index>(value), config);
         }
     }
     return changed;
