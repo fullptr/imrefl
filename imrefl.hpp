@@ -54,6 +54,7 @@ namespace detail {
 struct ImGuiID
 {
     ImGuiID(const char* id) { ImGui::PushID(id); }
+    ImGuiID(std::size_t id) { ImGui::PushID(id); }
     ImGuiID(const ImGuiID&) = delete;
     ImGuiID& operator=(const ImGuiID&) = delete;
     ImGuiID(ImGuiID&&) = delete;
@@ -308,7 +309,6 @@ bool Render(const char* name, bool& value, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, std::span<T> arr, const Config& config)
 {
-    ImGuiID guard{name};
     if (arr.empty()) {
         ImGui::Text("span '%s' is of length 0", name);
         return false;
@@ -469,19 +469,16 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 
     bool changed = false;
     ImGui::Text("%s", name);
-    ImGui::PushID(name);
     if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-            ImGui::PushID(index);
+            ImGuiID id{index};
             if (ImGui::Selectable(type_names[index])) {
                 value.template emplace<index>();
                 changed = true;
             }
-            ImGui::PopID();
         }
         ImGui::EndCombo();
     }
-    ImGui::PopID();
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
             changed = changed || Render("##combo_box_element", std::get<index>(value), config);

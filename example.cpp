@@ -15,10 +15,8 @@
 enum class pet { cat, dog, dragon };
 
 struct entity {
-    [[=ImRefl::radio]]
-    pet p1;
-    [[=ImRefl::radio]]
-    pet p2;
+    std::pair<int, float> v1;
+    std::pair<int, float> v2;
 };
 
 int main()
