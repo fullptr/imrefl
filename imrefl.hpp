@@ -482,16 +482,19 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
 {
     bool changed = false;
 
-    ImGui::Text("%s", name);
-    template for (constexpr auto member : nsdm_of<T>()) {
-        if constexpr (!has_annotation<Ignore>(member)) {
-            // Previous config does not propagate down to the current struct
-            const Config new_config = get_config<member>();
-
-            if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
-            changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
-            if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
+    if (ImGui::TreeNode(name)) {
+        template for (constexpr auto member : nsdm_of<T>()) {
+            if constexpr (!has_annotation<Ignore>(member)) {
+                // Previous config does not propagate down to the current struct
+                const Config new_config = get_config<member>();
+    
+                if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
+                changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
+                if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
+            }
         }
+
+        ImGui::TreePop();
     }
 
     return changed;
