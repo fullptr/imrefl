@@ -8,8 +8,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include <meta>
-#include <map>
 #include <print>
 
 enum class pet { cat, dog, dragon };
