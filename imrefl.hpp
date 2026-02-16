@@ -449,9 +449,7 @@ consteval auto integer_sequence(std::size_t max)
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
-    // TODO: Come up with a C++26 reflection implementation of the type name.
-    // Sadly it is still a non-trivial exercise.
-    static const char* type_names[] = { typeid(Ts).name()... };
+    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
 
     bool changed = false;
     ImGui::Text("%s", name);
