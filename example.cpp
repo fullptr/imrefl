@@ -12,8 +12,13 @@
 #include <map>
 #include <print>
 
+enum class pet { cat, dog, dragon };
+
 struct entity {
-    std::variant<int, float, std::string> data = std::string{"foo"};
+    [[=ImRefl::radio]]
+    pet p1;
+    [[=ImRefl::radio]]
+    pet p2;
 };
 
 int main()
