@@ -435,7 +435,7 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
             changed = true;
         } else {
             ImGui::SameLine();
-            Render(name, *value, config);
+            changed = Render(name, *value, config);
         }
     }
     else {
@@ -504,7 +504,7 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
                 new_config.input_flags = config.input_flags;
     
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
-                changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || ;
+                changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
             }
         }
