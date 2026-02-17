@@ -409,8 +409,8 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config)
     ImGui::Text("%s", name);
 
     bool changed = false;
-    changed = changed || Render("first", value.first, config);
-    changed = changed || Render("second", value.second, config);
+    changed = Render("first", value.first, config) || changed;
+    changed = Render("second", value.second, config) || changed;
 
     return changed;
 }
@@ -476,7 +476,7 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     }
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = changed || Render("", std::get<index>(value), config);
+            changed = Render("", std::get<index>(value), config) || changed;
         }
     }
     return changed;
@@ -496,7 +496,7 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
             const Config new_config = get_config<member>();
 
             if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
-            changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
+            changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
             if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
         }
     }
