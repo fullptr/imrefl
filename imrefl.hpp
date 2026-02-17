@@ -13,6 +13,13 @@
 #include <variant>
 #include <typeinfo>
 
+typedef int ImReflInputFlags;
+
+enum ImReflInputFlags_ {
+    ImReflInputFlags_None           = 0,
+    ImReflInputFlags_DefaultOpen    = 1 << 0,
+};
+
 namespace ImRefl {
 
 struct Ignore {};
@@ -64,6 +71,8 @@ struct ImGuiID
 
 struct Config
 {
+    ImReflInputFlags input_flags = 0;
+
     bool color       = false;
     bool color_wheel = false;
     bool radio       = false;
@@ -486,11 +495,13 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     ImGuiID guard{name};
     bool changed = false;
 
-    if (ImGui::TreeNode(name)) {
+    ImGuiTreeNodeFlags flags = (config.input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
+    if (ImGui::TreeNodeEx(name, flags)) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                // Previous config does not propagate down to the current struct
-                const Config new_config = get_config<member>();
+                // Previous config does not propagate down to the current struct (with the exception of input_flags)
+                Config new_config = get_config<member>();
+                new_config.input_flags = config.input_flags;
     
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
                 changed = changed || Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
@@ -512,9 +523,11 @@ bool Render(const char* name, T& val, const Config& config)
 
 }  // namespace detail
 
-bool Input(const char* name, auto& value)
+bool Input(const char* name, auto& value, ImReflInputFlags flags = 0)
 {
     detail::Config config;
+    config.input_flags = flags;
+
     return detail::Render(name, value, config);
 }
 
