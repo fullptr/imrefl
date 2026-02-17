@@ -8,12 +8,13 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include <experimental/meta>
-#include <map>
 #include <print>
 
+enum class pet { cat, dog, dragon };
+
 struct entity {
-    std::variant<int, float, std::string> data = std::string{"foo"};
+    std::pair<int, float> p1;
+    std::pair<int, float> p2;
 };
 
 int main()
