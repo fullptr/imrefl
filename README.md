@@ -49,15 +49,24 @@ That's it! No macros or other setup needed!
 ## Building the example
 From the top level of the repository, run:
 ```
-cmake -S . -B build -DIMREFL_BUILD_EXAMPLE=ON -DCMAKE_CXX_COMPILER=/path/to/cxx26/compiler
+cmake -S . -B build -DIMREFL_BUILD_EXAMPLE=ON -DCMAKE_CXX_COMPILER=/path/to/cxx26/compiler && cmake --build build
 ```
-replacing `/path/to/cxx/compiler` with the path to your compiler
+replacing `/path/to/cxx/compiler` with the path to your compiler. This will produce a binary at `build/example/imrefl-example`
+
 
 ## Importing the library
-Including `ImRefl` in your own project is simple using CMake:
+Using `ImRefl` in your own project is simple using CMake:
 ```cmake
-# First include the source
+# First include the source directory:
 add_subdirectory(imrefl)
+
+# OR with FetchContent:
+include(FetchContent)
+FetchContent_Declare(
+    imrefl
+    GIT_REPOSITORY https://github.com/fullptr/imrefl.git
+)
+FetchContent_MakeAvailable(imrefl)
 
 # Then link the ImRefl interface
 target_link_libraries(example PRIVATE ImRefl)
