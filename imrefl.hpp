@@ -31,8 +31,8 @@ inline static constexpr Readonly readonly {};
 struct InLine {};
 inline static constexpr InLine in_line {};
 
-struct Resizable {};
-inline static constexpr Resizable resizable {};
+struct NonResizable {};
+inline static constexpr NonResizable non_resizable {};
 
 struct Color {};
 inline static constexpr Color color {};
@@ -79,12 +79,12 @@ struct Config
 {
     ImReflInputFlags input_flags = 0;
 
-    bool in_line     = false;
-    bool resizable   = false;
-    bool color       = false;
-    bool color_wheel = false;
-    bool radio       = false;
-    bool is_string   = false; // used for formatting char buffers
+    bool in_line         = false;
+    bool non_resizable   = false;
+    bool color           = false;
+    bool color_wheel     = false;
+    bool radio           = false;
+    bool is_string       = false; // used for formatting char buffers
 
     std::variant<Normal, Slider, Drag> scalar_style = Normal{};
 };
@@ -200,8 +200,8 @@ constexpr Config get_config()
     if constexpr (has_annotation<InLine>(info)) {
         config.in_line = true;
     }
-    if constexpr (has_annotation<Resizable>(info)) {
-        config.resizable = true;
+    if constexpr (has_annotation<NonResizable>(info)) {
+        config.non_resizable = true;
     }
     if constexpr (has_annotation<ColorWheel>(info)) {
         config.color_wheel = true;
@@ -453,7 +453,7 @@ bool Render(const char* name, std::array<T, N>& arr, const Config& config)
 template <typename T>
 bool Render(const char* name, std::vector<T>& vec, const Config& config)
 {
-    if (config.resizable) {
+    if (!config.non_resizable) {
         const float button_size = ImGui::GetFrameHeight();
         ImGuiStyle style = ImGui::GetStyle();
         
