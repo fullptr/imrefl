@@ -47,6 +47,9 @@ That's it! No macros or other setup needed!
 | `ImRefl::radio` | For enum classes. Displays the enum as a series of radio buttons rather than a dropdown. |
 
 ## Building the example
+### Dependencies
+- glfw3
+
 From the top level of the repository, run:
 ```
 cmake -S . -B build -DIMREFL_BUILD_EXAMPLE=ON -DCMAKE_CXX_COMPILER=/path/to/cxx26/compiler && cmake --build build

@@ -22,8 +22,6 @@ add_executable(imrefl-example example.cpp ${IMGUI_SRC})
 
 target_include_directories(imrefl-example PRIVATE ${imgui_SOURCE_DIR})
 
-target_compile_options(imrefl-example PRIVATE -freflection)
-
 # Clang specific flags
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(imrefl-example PRIVATE
