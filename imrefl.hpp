@@ -582,7 +582,6 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     ImGuiID guard{name};
     bool changed = false;
 
-    ImGuiTreeNodeFlags flags = (config.input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
     if (ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags))) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
