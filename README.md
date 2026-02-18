@@ -46,6 +46,23 @@ That's it! No macros or other setup needed!
 | `ImRefl::string` | For C-style char arrays, formats them as a fixed size string rather than a set of values. |
 | `ImRefl::radio` | For enum classes. Displays the enum as a series of radio buttons rather than a dropdown. |
 
+## Building the example
+From the top level of the repository, run:
+```
+cmake -S . -B build -DIMREFL_BUILD_EXAMPLE=ON -DCMAKE_CXX_COMPILER=/path/to/cxx26/compiler
+```
+replacing `/path/to/cxx/compiler` with the path to your compiler
+
+## Importing the library
+Including `ImRefl` in your own project is simple using CMake:
+```cmake
+# First include the source
+add_subdirectory(imrefl)
+
+# Then link the ImRefl interface
+target_link_libraries(example PRIVATE ImRefl)
+```
+
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
 * Support for third party types such as the GLM library.

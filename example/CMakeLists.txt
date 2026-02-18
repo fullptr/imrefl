@@ -28,9 +28,6 @@ target_compile_options(imrefl-example PRIVATE -freflection)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(imrefl-example PRIVATE
     -stdlib=libc++
-    -fexpansion-statements
-    -fannotation-attributes
-    -fparameter-reflection
   )
 
   # Hack to get the runtime library path
@@ -50,5 +47,5 @@ endif()
 target_link_libraries(imrefl-example PRIVATE
   ${OPENGL_LIBRARIES}
   glfw
-  imrefl
+  ImRefl
 )
