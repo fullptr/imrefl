@@ -28,8 +28,8 @@ inline static constexpr Ignore ignore {};
 struct Readonly {};
 inline static constexpr Readonly readonly {};
 
-struct Collapsible {};
-inline static constexpr Collapsible collapsible {};
+struct InLine {};
+inline static constexpr InLine in_line {};
 
 struct Color {};
 inline static constexpr Color color {};
@@ -76,7 +76,7 @@ struct Config
 {
     ImReflInputFlags input_flags = 0;
 
-    bool collapsible = false;
+    bool in_line     = false;
     bool color       = false;
     bool color_wheel = false;
     bool radio       = false;
@@ -193,8 +193,8 @@ constexpr Config get_config()
     if constexpr (constexpr auto style = fetch_annotation<Drag>(info)) {
         config.scalar_style = *style;
     }
-    if constexpr (has_annotation<Collapsible>(info)) {
-        config.collapsible = true;
+    if constexpr (has_annotation<InLine>(info)) {
+        config.in_line = true;
     }
     if constexpr (has_annotation<ColorWheel>(info)) {
         config.color_wheel = true;
@@ -235,13 +235,13 @@ bool Render(const char* name, char& c, const Config& config);
 bool Render(const char* name, long double& x, const Config& config);
 bool Render(const char* name, bool& value, const Config& config);
 
-template <arithmetic T>
+template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config);
 
-template <arithmetic T, std::size_t N> requires (N > 0)
+template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, T (&arr)[N], const Config& config);
 
-template <arithmetic T, std::size_t N> requires (N > 0)
+template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config);
 
 bool Render(const char* name, std::string& value, const Config& config);
@@ -330,7 +330,7 @@ bool Render(const char* name, bool& value, const Config& config)
     return ImGui::Checkbox(name, &value);
 }
 
-template <arithmetic T>
+template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config)
 {
     if (arr.empty()) {
@@ -338,100 +338,114 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         return false;
     }
 
-    if constexpr (^^T == ^^char) {
-        if (config.is_string) {
-            return ImGui::InputText(name, arr.data(), arr.size());
+    if constexpr (arithmetic<T>) {
+        if constexpr (^^T == ^^char) {
+            if (config.is_string) {
+                return ImGui::InputText(name, arr.data(), arr.size());
+            }
         }
-    }
-
-    // Only float permits the color options
-    if constexpr (^^T == ^^float) {
-        switch (arr.size()) {
-            case 3: {
-                if (config.color_wheel) {
-                    return ImGui::ColorPicker3(name, arr.data());
-                } else if (config.color) {
-                    return ImGui::ColorEdit3(name, arr.data());
-                }
-            } break;
-            case 4: {
-                if (config.color_wheel) {
-                    return ImGui::ColorPicker4(name, arr.data());
-                } else if (config.color) {
-                    return ImGui::ColorEdit4(name, arr.data());
-                }
-            } break;
+    
+        // Only float permits the color options
+        if constexpr (^^T == ^^float) {
+            switch (arr.size()) {
+                case 3: {
+                    if (config.color_wheel) {
+                        return ImGui::ColorPicker3(name, arr.data());
+                    } else if (config.color) {
+                        return ImGui::ColorEdit3(name, arr.data());
+                    }
+                } break;
+                case 4: {
+                    if (config.color_wheel) {
+                        return ImGui::ColorPicker4(name, arr.data());
+                    } else if (config.color) {
+                        return ImGui::ColorEdit4(name, arr.data());
+                    }
+                } break;
+            }
         }
-    }
-
-    const auto visitor = overloaded{
-        [&](Normal) {
-            const T step = 1; // Only used for integral types
-
-            if (config.collapsible) {
+    
+        const auto visitor = overloaded{
+            [&](Normal) {
+                const T step = 1; // Only used for integral types
+    
+                if (config.in_line || arr.size() == 1) {
+                    return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+                }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
                 if (open) {
-                    for (size_t i = 0; i < arr.size(); ++i) {
-                        ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::integral<T> ? &step : nullptr);
+                    for (int i = 0; i < arr.size(); ++i) {
+                        ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::is_integral_v<T> ? &step : nullptr);
                     }
                     ImGui::TreePop();
                 }
                 return open;
-            } else {
-                return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
-            }
-        },
-        [&](Slider slider) {
-            const auto min = static_cast<T>(slider.min);
-            const auto max = static_cast<T>(slider.max);
-
-            if (config.collapsible) {
+            },
+            [&](Slider slider) {
+                const auto min = static_cast<T>(slider.min);
+                const auto max = static_cast<T>(slider.max);
+    
+                if (config.in_line || arr.size() == 1) {
+                    return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+                }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
                 if (open) {
-                    for (size_t i = 0; i < arr.size(); ++i) {
+                    for (int i = 0; i < arr.size(); ++i) {
                         ImGui::SliderScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], &min, &max);
                     }
                     ImGui::TreePop();
                 }
                 return open;
-            } else {
-                return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
-            }
-        },
-        [&](Drag drag) {
-            const auto min = static_cast<T>(drag.min);
-            const auto max = static_cast<T>(drag.max);
-            const auto speed = drag.speed;
-
-            if (config.collapsible) {
+            },
+            [&](Drag drag) {
+                const auto min = static_cast<T>(drag.min);
+                const auto max = static_cast<T>(drag.max);
+                const auto speed = drag.speed;
+    
+                if (config.in_line || arr.size() == 1) {
+                    return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+                }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
                 if (open) {
-                    for (size_t i = 0; i < arr.size(); ++i) {
+                    for (int i = 0; i < arr.size(); ++i) {
                         ImGui::DragScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], speed, &min, &max);
                     }
                     ImGui::TreePop();
                 }
                 return open;
-            } else {
-                return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
             }
+        };
+        return std::visit(visitor, config.scalar_style);
+    }
+    else {
+        if (arr.empty()) {
+            ImGui::Text("span '%s' is of length 0", name);
+            return false;
         }
-    };
-    return std::visit(visitor, config.scalar_style);
+
+        bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
+        if (open) {
+            for (size_t i = 0; i < arr.size(); ++i) {
+                Render(std::format("[{}]", i).c_str(), arr[i], config);
+            }
+            ImGui::TreePop();
+        }
+        return open;
+    }
 }
 
-template <arithmetic T, std::size_t N>
+template <typename T, std::size_t N>
     requires (N > 0)
 bool Render(const char* name, T (&arr)[N], const Config& config)
 {
     return Render(name, std::span<T>{arr, N}, config);
 }
 
-template <arithmetic T, std::size_t N>
+template <typename T, std::size_t N>
     requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config)
 {
-    return Render(name, std::span<T>{arr.begin(), arr.end()}, config);
+    return Render(name, std::span<T>{arr}, config);
 }
 
 bool Render(const char* name, std::string& value, const Config& config)
