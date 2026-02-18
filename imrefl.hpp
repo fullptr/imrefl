@@ -28,6 +28,9 @@ inline static constexpr Ignore ignore {};
 struct Readonly {};
 inline static constexpr Readonly readonly {};
 
+struct Collapsible {};
+inline static constexpr Collapsible collapsible {};
+
 struct Color {};
 inline static constexpr Color color {};
 
@@ -73,6 +76,7 @@ struct Config
 {
     ImReflInputFlags input_flags = 0;
 
+    bool collapsible = false;
     bool color       = false;
     bool color_wheel = false;
     bool radio       = false;
@@ -189,6 +193,9 @@ constexpr Config get_config()
     if constexpr (constexpr auto style = fetch_annotation<Drag>(info)) {
         config.scalar_style = *style;
     }
+    if constexpr (has_annotation<Collapsible>(info)) {
+        config.collapsible = true;
+    }
     if constexpr (has_annotation<ColorWheel>(info)) {
         config.color_wheel = true;
     }
@@ -203,6 +210,14 @@ constexpr Config get_config()
     }
 
     return config;
+}
+
+ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
+{
+    ImGuiTreeNodeFlags tree_node_flags = 0;
+    tree_node_flags |= (input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
+
+    return tree_node_flags;
 }
 
 // Forward decls
@@ -352,18 +367,54 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
     const auto visitor = overloaded{
         [&](Normal) {
             const T step = 1; // Only used for integral types
-            return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+
+            if (config.collapsible) {
+                bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
+                if (open) {
+                    for (size_t i = 0; i < arr.size(); ++i) {
+                        ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::integral<T> ? &step : nullptr);
+                    }
+                    ImGui::TreePop();
+                }
+                return open;
+            } else {
+                return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
+            }
         },
         [&](Slider slider) {
             const auto min = static_cast<T>(slider.min);
             const auto max = static_cast<T>(slider.max);
-            return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+
+            if (config.collapsible) {
+                bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
+                if (open) {
+                    for (size_t i = 0; i < arr.size(); ++i) {
+                        ImGui::SliderScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], &min, &max);
+                    }
+                    ImGui::TreePop();
+                }
+                return open;
+            } else {
+                return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
+            }
         },
         [&](Drag drag) {
             const auto min = static_cast<T>(drag.min);
             const auto max = static_cast<T>(drag.max);
             const auto speed = drag.speed;
-            return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+
+            if (config.collapsible) {
+                bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
+                if (open) {
+                    for (size_t i = 0; i < arr.size(); ++i) {
+                        ImGui::DragScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], speed, &min, &max);
+                    }
+                    ImGui::TreePop();
+                }
+                return open;
+            } else {
+                return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+            }
         }
     };
     return std::visit(visitor, config.scalar_style);
@@ -496,13 +547,13 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     bool changed = false;
 
     ImGuiTreeNodeFlags flags = (config.input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
-    if (ImGui::TreeNodeEx(name, flags)) {
+    if (ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags))) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
                 // Previous config does not propagate down to the current struct (with the exception of input_flags)
                 Config new_config = get_config<member>();
                 new_config.input_flags = config.input_flags;
-    
+
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
                 changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
