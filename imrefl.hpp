@@ -31,6 +31,9 @@ inline static constexpr Readonly readonly {};
 struct InLine {};
 inline static constexpr InLine in_line {};
 
+struct Resizable {};
+inline static constexpr Resizable resizable {};
+
 struct Color {};
 inline static constexpr Color color {};
 
@@ -77,6 +80,7 @@ struct Config
     ImReflInputFlags input_flags = 0;
 
     bool in_line     = false;
+    bool resizable   = false;
     bool color       = false;
     bool color_wheel = false;
     bool radio       = false;
@@ -196,6 +200,9 @@ constexpr Config get_config()
     if constexpr (has_annotation<InLine>(info)) {
         config.in_line = true;
     }
+    if constexpr (has_annotation<Resizable>(info)) {
+        config.resizable = true;
+    }
     if constexpr (has_annotation<ColorWheel>(info)) {
         config.color_wheel = true;
     }
@@ -243,6 +250,9 @@ bool Render(const char* name, T (&arr)[N], const Config& config);
 
 template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config);
+
+template <typename T>
+bool Render(const char* name, std::vector<T>& vec, const Config& config);
 
 bool Render(const char* name, std::string& value, const Config& config);
 
@@ -299,7 +309,9 @@ bool Render(const char* name, T& value, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config)
 {
-    return Render(name, std::span<T>{&val, 1}, config);
+    Config new_config = config;
+    new_config.in_line = true;
+    return Render(name, std::span<T>{&val, 1}, new_config);
 }
 
 // Treat char as a single character string, rather than an integral
@@ -333,11 +345,6 @@ bool Render(const char* name, bool& value, const Config& config)
 template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config)
 {
-    if (arr.empty()) {
-        ImGui::Text("span '%s' is of length 0", name);
-        return false;
-    }
-
     if constexpr (arithmetic<T>) {
         if constexpr (^^T == ^^char) {
             if (config.is_string) {
@@ -369,7 +376,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
             [&](Normal) {
                 const T step = 1; // Only used for integral types
     
-                if (config.in_line || arr.size() == 1) {
+                if (config.in_line) {
                     return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -385,7 +392,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto min = static_cast<T>(slider.min);
                 const auto max = static_cast<T>(slider.max);
     
-                if (config.in_line || arr.size() == 1) {
+                if (config.in_line) {
                     return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -402,7 +409,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto max = static_cast<T>(drag.max);
                 const auto speed = drag.speed;
     
-                if (config.in_line || arr.size() == 1) {
+                if (config.in_line) {
                     return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -418,11 +425,6 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         return std::visit(visitor, config.scalar_style);
     }
     else {
-        if (arr.empty()) {
-            ImGui::Text("span '%s' is of length 0", name);
-            return false;
-        }
-
         bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
         if (open) {
             for (size_t i = 0; i < arr.size(); ++i) {
@@ -446,6 +448,26 @@ template <typename T, std::size_t N>
 bool Render(const char* name, std::array<T, N>& arr, const Config& config)
 {
     return Render(name, std::span<T>{arr}, config);
+}
+
+template <typename T>
+bool Render(const char* name, std::vector<T>& vec, const Config& config)
+{
+    if (config.resizable) {
+        const float button_size = ImGui::GetFrameHeight();
+        ImGuiStyle style = ImGui::GetStyle();
+        
+        if (ImGui::Button("-", {button_size, button_size}) && !vec.empty()) {
+            vec.erase(vec.end() - 1);
+        }
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        if (ImGui::Button("+", {button_size, button_size})) {
+            vec.push_back({});
+        }
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+    }
+
+    return Render(name, std::span<T>{vec}, config);
 }
 
 bool Render(const char* name, std::string& value, const Config& config)
