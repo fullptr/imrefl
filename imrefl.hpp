@@ -376,7 +376,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
             [&](Normal) {
                 const T step = 1; // Only used for integral types
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -392,7 +392,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto min = static_cast<T>(slider.min);
                 const auto max = static_cast<T>(slider.max);
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -409,7 +409,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto max = static_cast<T>(drag.max);
                 const auto speed = drag.speed;
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
                 }
                 bool open = ImGui::TreeNodeEx(name, get_tree_node_flags(config.input_flags));
@@ -553,10 +553,12 @@ template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
     ImGuiID guard{name};
-    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+    const ImGuiStyle& style = ImGui::GetStyle();
 
+    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
     bool changed = false;
-    ImGui::Text("%s", name);
+
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 5 * 2 - style.ItemInnerSpacing.x);
     if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
             ImGuiID id{index};
@@ -567,11 +569,18 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
         }
         ImGui::EndCombo();
     }
+    ImGui::SameLine(0, style.ItemInnerSpacing.x);
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
             changed = Render("", std::get<index>(value), config) || changed;
         }
     }
+
+    ImGui::SameLine();
+    ImGui::Text("%s", name);
+
     return changed;
 }
 
