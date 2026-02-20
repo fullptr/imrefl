@@ -34,6 +34,11 @@ inline static constexpr InLine in_line {};
 struct NonResizable {};
 inline static constexpr NonResizable non_resizable {};
 
+struct Separator { const char* title; };
+template <std::size_t N>
+constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
+constexpr Separator separator() { return separator(""); }
+
 struct Color {};
 inline static constexpr Color color {};
 
@@ -599,6 +604,10 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
                 // Previous config does not propagate down to the current struct (with the exception of input_flags)
                 Config new_config = get_config<member>();
                 new_config.input_flags = config.input_flags;
+
+                if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                    ImGui::SeparatorText(separator->title);
+                }
 
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
                 changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
