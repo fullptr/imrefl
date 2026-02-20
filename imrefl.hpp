@@ -380,14 +380,14 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 if (config.in_line) {
                     return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
                 }
-                bool open = TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags));
-                if (open) {
+                bool changed = false;
+                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
                     for (int i = 0; i < arr.size(); ++i) {
-                        ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::is_integral_v<T> ? &step : nullptr);
+                        changed = ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::is_integral_v<T> ? &step : nullptr) || changed;
                     }
                     ImGui::TreePop();
                 }
-                return open;
+                return changed;
             },
             [&](Slider slider) {
                 const auto min = static_cast<T>(slider.min);
@@ -396,14 +396,14 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 if (config.in_line) {
                     return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
                 }
-                bool open = TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags));
-                if (open) {
+                bool changed = false;
+                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
                     for (int i = 0; i < arr.size(); ++i) {
-                        ImGui::SliderScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], &min, &max);
+                        changed = ImGui::SliderScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], &min, &max) || changed;
                     }
                     ImGui::TreePop();
                 }
-                return open;
+                return changed;
             },
             [&](Drag drag) {
                 const auto min = static_cast<T>(drag.min);
@@ -413,27 +413,27 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 if (config.in_line) {
                     return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
                 }
-                bool open = TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags));
-                if (open) {
+                bool changed = false;
+                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
                     for (int i = 0; i < arr.size(); ++i) {
-                        ImGui::DragScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], speed, &min, &max);
+                        changed = ImGui::DragScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], speed, &min, &max) || changed;
                     }
                     ImGui::TreePop();
                 }
-                return open;
+                return changed;
             }
         };
         return std::visit(visitor, config.scalar_style);
     }
     else {
-        bool open = TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags));
-        if (open) {
+        bool changed = false;
+        if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
             for (size_t i = 0; i < arr.size(); ++i) {
-                Render(std::format("[{}]", i).c_str(), arr[i], config);
+                changed = Render(std::format("[{}]", i).c_str(), arr[i], config) || changed;
             }
             ImGui::TreePop();
         }
-        return open;
+        return changed;
     }
 }
 
