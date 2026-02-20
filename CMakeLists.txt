@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(ImRefl INTERFACE)
 target_include_directories(ImRefl INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-target_sources(ImRefl INTERFACE imrefl.cpp)
 
 target_compile_options(ImRefl INTERFACE -freflection)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

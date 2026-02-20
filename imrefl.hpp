@@ -218,7 +218,7 @@ constexpr Config get_config()
     return config;
 }
 
-ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
+constexpr ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
 {
     ImGuiTreeNodeFlags tree_node_flags = 0;
     tree_node_flags |= (input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
@@ -226,7 +226,16 @@ ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
     return tree_node_flags;
 }
 
-bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags = 0);
+inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
+{
+    bool want_disabled = ImGui::GetCurrentContext()->DisabledStackSize > 0;
+    if (want_disabled) { ImGui::EndDisabled(); }
+    bool open = ImGui::TreeNodeEx(label, flags);
+    if (want_disabled) { ImGui::BeginDisabled(); }
+
+    return open;
+}
+
 
 // Forward decls
 
