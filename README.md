@@ -28,6 +28,7 @@ That's it! No macros or other setup needed!
 * `std::pair<L, R>`.
 * `std::optional<T>`.
 * `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
+* `std::vector<T>`
 * `std::variant<Ts...>` - however this can be improved; it currently uses typeid to get the type names, which can be hard to read.
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
@@ -45,6 +46,9 @@ That's it! No macros or other setup needed!
 | `ImRefl::color_wheel`      | Similar to the above but a full color wheel. |
 | `ImRefl::string` | For C-style char arrays, formats them as a fixed size string rather than a set of values. |
 | `ImRefl::radio` | For enum classes. Displays the enum as a series of radio buttons rather than a dropdown. |
+| `ImRefl::in_line` | By default, array-like values are show with each element on a separate line. However, for types such as `float[3]` representing a position, it may be desirable to show them on a single line, which this annotation is for. |
+| `ImRefl::non_resizeable` | For dynamic arrays, this annotation disables the ability to add and remove elements. |
+| `ImRefl::separator(title)` | Adds an ImGui separator line with optional title above the annotated field. | 
 
 ## Building the example
 ### Dependencies
