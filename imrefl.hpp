@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #ifdef IMREFL_GLM
 #include <glm/glm.hpp>
