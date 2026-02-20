@@ -1,3 +1,4 @@
+#include <climits>
 #include <imgui.h>
 #define IMREFL_GLM
 #include "imrefl.hpp"
@@ -13,8 +14,18 @@
 enum class pet { cat, dog, dragon };
 
 struct entity {
+    [[=ImRefl::readonly]]
+    std::vector<pet> pets = {pet::cat, pet::cat, pet::dragon};
+
+
     std::pair<int, float> p1;
     std::pair<int, float> p2;
+};
+
+struct world
+{
+    [[=ImRefl::readonly]]
+    entity e;
 };
 
 int main()
@@ -47,7 +58,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    entity player = {};
+    world w = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -56,7 +67,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Settings", player);
+        ImRefl::Input("Settings",  w);
         ImGui::End();
         ImGui::Render();
 
