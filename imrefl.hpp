@@ -34,12 +34,11 @@ inline static constexpr InLine in_line {};
 struct NonResizable {};
 inline static constexpr NonResizable non_resizable {};
 
-struct Separator { bool after; };
-constexpr Separator separator(bool after = false) { return { after }; }
-
-struct SeparatorText { const char* text; bool after; };
+struct Separator { const char* title; };
 template <std::size_t N>
-constexpr SeparatorText separator_text(const char(&text)[N], bool after = false) { return { std::define_static_string(text), after }; }
+constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
+constexpr Separator separator() { return separator(""); }
+
 
 struct Color {};
 inline static constexpr Color color {};
@@ -596,25 +595,13 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
                 Config new_config = get_config<member>();
                 new_config.input_flags = config.input_flags;
 
-                constexpr std::optional<SeparatorText> separator_text = fetch_annotation<SeparatorText>(member);
-                constexpr std::optional<Separator> separator = fetch_annotation<Separator>(member);
-                // Pre-separator
-                if constexpr (separator_text && !separator_text->after) {
-                    ImGui::SeparatorText(separator_text->text);
-                } else if constexpr (separator && !separator->after) {
-                    ImGui::SeparatorText("");
+                if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                    ImGui::SeparatorText(separator->title);
                 }
 
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
                 changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
                 if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
-
-                // Post-separator
-                if constexpr (separator_text && separator_text->after) {
-                    ImGui::SeparatorText(separator_text->text);
-                } else if constexpr (separator && separator->after) {
-                    ImGui::SeparatorText("");
-                }
             }
         }
 
