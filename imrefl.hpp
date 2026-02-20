@@ -39,7 +39,6 @@ template <std::size_t N>
 constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
 constexpr Separator separator() { return separator(""); }
 
-
 struct Color {};
 inline static constexpr Color color {};
 
