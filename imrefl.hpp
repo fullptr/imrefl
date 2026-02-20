@@ -558,7 +558,7 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
     bool changed = false;
 
-    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 5 * 2 - style.ItemInnerSpacing.x);
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
     if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
             ImGuiID id{index};
@@ -574,12 +574,9 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = Render("", std::get<index>(value), config) || changed;
+            changed = Render(name, std::get<index>(value), config) || changed;
         }
     }
-
-    ImGui::SameLine();
-    ImGui::Text("%s", name);
 
     return changed;
 }
