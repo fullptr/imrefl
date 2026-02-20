@@ -92,7 +92,7 @@ struct Config
 template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 
 template <typename T>
-concept arithmetic = std::integral<T> || std::floating_point<T>;
+concept arithmetic = (std::integral<T> || std::floating_point<T>) && !(std::is_same_v<T, bool>);
 
 template <typename E>
     requires std::is_scoped_enum_v<E>
