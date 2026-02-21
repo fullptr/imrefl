@@ -243,14 +243,14 @@ inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
 }
 
 template<typename T>
-concept appendable = requires(T t)
+concept can_push_pop_back = requires(T t)
 {
     { t.emplace_back() };
     { t.pop_back() };
 };
 
 template<typename T>
-concept prependable = requires(T t)
+concept can_push_pop_front = requires(T t)
 {
     { t.emplace_front() };
     { t.pop_front() };
@@ -264,7 +264,7 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
         const float button_size = ImGui::GetFrameHeight();
         const ImGuiStyle& style = ImGui::GetStyle();
         
-        if constexpr (prependable<R>) {
+        if constexpr (can_push_pop_front<R>) {
             ImGuiID id{"front"};
             ImGui::Text("Front:");
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
@@ -278,7 +278,7 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
         }
 
-        if constexpr (appendable<R>) {
+        if constexpr (can_push_pop_back<R>) {
             ImGuiID id{"back"};
             ImGui::Text("Back:");
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
