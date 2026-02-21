@@ -21,14 +21,20 @@ That's it! No macros or other setup needed!
 ### Supported types
 * Aggregate structs.
 * Enum classes.
-* All arithmetic types including `long double`.
-* `bool` is rendered as a checkbox.
-* `char` is treated as a character rather than an 8 bit integer. 
+* All arithmetic types.
+    * `bool` is rendered as a checkbox.
+    * `char` is treated as a character rather than an 8 bit integer. 
+    * `long double` is treated as a `double` as it is not supported by ImGui out of the box.
 * `std::string`.
 * `std::pair<L, R>`.
 * `std::optional<T>`.
 * `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
-* `std::vector<T>`
+* All containers satisfying `std::ranges::forward_range`, notably:
+    * `std::vector<T>`
+    * `std::deque<T>`
+    * `std::list<T>`
+    * `std::forward_list<T>`
+
 * `std::variant<Ts...>` - however this can be improved; it currently uses typeid to get the type names, which can be hard to read.
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
