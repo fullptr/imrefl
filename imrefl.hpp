@@ -6,7 +6,6 @@
 #endif
 
 #include <concepts>
-#include <deque>
 #include <format>
 #include <meta>
 #include <optional>
@@ -330,11 +329,8 @@ bool Render(const char* name, T (&arr)[N], const Config& config);
 template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config);
 
-template <typename T>
-bool Render(const char* name, std::vector<T>& vec, const Config& config);
-
-template <typename T>
-bool Render(const char* name, std::deque<T>& vec, const Config& config);
+template <std::ranges::forward_range R>
+bool Render(const char* name, R& range, const Config& config);
 
 bool Render(const char* name, std::string& value, const Config& config);
 
@@ -509,16 +505,10 @@ bool Render(const char* name, std::array<T, N>& arr, const Config& config)
     return Render(name, std::span<T>{arr}, config);
 }
 
-template <typename T>
-bool Render(const char* name, std::vector<T>& vec, const Config& config)
+template <std::ranges::forward_range R>
+bool Render(const char* name, R& range, const Config& config)
 {
-    return RenderForwardRange(name, vec, config);
-}
-
-template <typename T>
-bool Render(const char* name, std::deque<T>& deq, const Config& config)
-{
-    return RenderForwardRange(name, deq, config);
+    return RenderForwardRange(name, range, config);
 }
 
 bool Render(const char* name, std::string& value, const Config& config)

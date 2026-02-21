@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 
 #include <print>
+#include <list>
 
 enum class pet { cat, dog, dragon };
 
@@ -19,7 +20,7 @@ struct world
     std::array<float, 3> color;
 
     [[=ImRefl::slider(0, 100)]]
-    std::deque<int> data = {1, 2, 3, 4};
+    std::list<int> data = {1, 2, 3, 4};
 };
 
 int main()
