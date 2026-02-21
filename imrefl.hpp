@@ -259,6 +259,7 @@ concept prependable = requires(T t)
 template <std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, R& range, const Config& config)
 {
+    ImGuiID id{name};
     if (!config.non_resizable) {
         const float button_size = ImGui::GetFrameHeight();
         const ImGuiStyle& style = ImGui::GetStyle();
