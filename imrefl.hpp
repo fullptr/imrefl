@@ -5,12 +5,13 @@
 #include <glm/glm.hpp>
 #endif
 
-#include <meta>
-#include <print>
-#include <format>
 #include <concepts>
-#include <type_traits>
+#include <deque>
+#include <format>
+#include <meta>
 #include <optional>
+#include <print>
+#include <type_traits>
 #include <variant>
 
 typedef int ImReflInputFlags;
@@ -242,6 +243,68 @@ inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
     return open;
 }
 
+template<typename T>
+concept appendable = requires(T t)
+{
+    { t.emplace_back() };
+    { t.pop_back() };
+};
+
+template<typename T>
+concept prependable = requires(T t)
+{
+    { t.emplace_front() };
+    { t.pop_front() };
+};
+
+template <std::ranges::forward_range R>
+bool RenderForwardRange(const char* name, R& range, const Config& config)
+{
+    if (!config.non_resizable) {
+        const float button_size = ImGui::GetFrameHeight();
+        const ImGuiStyle& style = ImGui::GetStyle();
+        
+        if constexpr (prependable<R>) {
+            ImGuiID id{"front"};
+            ImGui::Text("Front:");
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                range.pop_front();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("+", {button_size, button_size})) {
+                range.emplace_front();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        }
+
+        if constexpr (appendable<R>) {
+            ImGuiID id{"back"};
+            ImGui::Text("Back:");
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                range.pop_back();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("+", {button_size, button_size})) {
+                range.emplace_back();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        }
+    }
+
+    bool changed = false;
+    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+        size_t i = 0;
+        for (auto& element : range) {
+            changed = Render(std::format("[{}]", i).c_str(), element, config) || changed; 
+            ++i;
+        }
+        ImGui::TreePop();
+    }
+    return changed;
+}
+
 
 // Forward decls
 
@@ -269,6 +332,9 @@ bool Render(const char* name, std::array<T, N>& arr, const Config& config);
 
 template <typename T>
 bool Render(const char* name, std::vector<T>& vec, const Config& config);
+
+template <typename T>
+bool Render(const char* name, std::deque<T>& vec, const Config& config);
 
 bool Render(const char* name, std::string& value, const Config& config);
 
@@ -325,9 +391,25 @@ bool Render(const char* name, T& value, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config)
 {
-    Config new_config = config;
-    new_config.in_line = true;
-    return Render(name, std::span<T>{&val, 1}, new_config);
+    const auto visitor = overloaded{
+        [&](Normal) {
+            const T step = 1; // Only used for integral types
+            return ImGui::InputScalar(name, num_type<T>(), &val, std::integral<T> ? &step : nullptr);
+        },
+        [&](Slider slider) {
+            const auto min = static_cast<T>(slider.min);
+            const auto max = static_cast<T>(slider.max);
+            return ImGui::SliderScalar(name, num_type<T>(), &val, &min, &max);
+        },
+        [&](Drag drag) {
+            const auto min = static_cast<T>(drag.min);
+            const auto max = static_cast<T>(drag.max);
+            const auto speed = drag.speed;
+            return ImGui::DragScalar(name, num_type<T>(), &val, speed, &min, &max);
+        }
+    };
+
+    return std::visit(visitor, config.scalar_style);
 }
 
 // Treat char as a single character string, rather than an integral
@@ -387,69 +469,30 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 } break;
             }
         }
-    
-        const auto visitor = overloaded{
-            [&](Normal) {
-                const T step = 1; // Only used for integral types
-    
-                if (config.in_line) {
+
+        if (config.in_line) {
+            const auto visitor = overloaded{
+                [&](Normal) {
+                    const T step = 1; // Only used for integral types
                     return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
-                }
-                bool changed = false;
-                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
-                    for (int i = 0; i < arr.size(); ++i) {
-                        changed = ImGui::InputScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], std::is_integral_v<T> ? &step : nullptr) || changed;
-                    }
-                    ImGui::TreePop();
-                }
-                return changed;
-            },
-            [&](Slider slider) {
-                const auto min = static_cast<T>(slider.min);
-                const auto max = static_cast<T>(slider.max);
-    
-                if (config.in_line) {
+                },
+                [&](Slider slider) {
+                    const auto min = static_cast<T>(slider.min);
+                    const auto max = static_cast<T>(slider.max);
                     return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
-                }
-                bool changed = false;
-                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
-                    for (int i = 0; i < arr.size(); ++i) {
-                        changed = ImGui::SliderScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], &min, &max) || changed;
-                    }
-                    ImGui::TreePop();
-                }
-                return changed;
-            },
-            [&](Drag drag) {
-                const auto min = static_cast<T>(drag.min);
-                const auto max = static_cast<T>(drag.max);
-                const auto speed = drag.speed;
-    
-                if (config.in_line) {
+                },
+                [&](Drag drag) {
+                    const auto min = static_cast<T>(drag.min);
+                    const auto max = static_cast<T>(drag.max);
+                    const auto speed = drag.speed;
                     return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
                 }
-                bool changed = false;
-                if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
-                    for (int i = 0; i < arr.size(); ++i) {
-                        changed = ImGui::DragScalar(std::format("[{}]", i).c_str(), num_type<T>(), &arr[i], speed, &min, &max) || changed;
-                    }
-                    ImGui::TreePop();
-                }
-                return changed;
-            }
-        };
-        return std::visit(visitor, config.scalar_style);
-    }
-    else {
-        bool changed = false;
-        if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
-            for (size_t i = 0; i < arr.size(); ++i) {
-                changed = Render(std::format("[{}]", i).c_str(), arr[i], config) || changed;
-            }
-            ImGui::TreePop();
+            };
+            return std::visit(visitor, config.scalar_style);
         }
-        return changed;
     }
+
+    return RenderForwardRange(name, arr, config);
 }
 
 template <typename T, std::size_t N>
@@ -469,21 +512,13 @@ bool Render(const char* name, std::array<T, N>& arr, const Config& config)
 template <typename T>
 bool Render(const char* name, std::vector<T>& vec, const Config& config)
 {
-    if (!config.non_resizable) {
-        const float button_size = ImGui::GetFrameHeight();
-        ImGuiStyle style = ImGui::GetStyle();
-        
-        if (ImGui::Button("-", {button_size, button_size}) && !vec.empty()) {
-            vec.erase(vec.end() - 1);
-        }
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
-        if (ImGui::Button("+", {button_size, button_size})) {
-            vec.push_back({});
-        }
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
-    }
+    return RenderForwardRange(name, vec, config);
+}
 
-    return Render(name, std::span<T>{vec}, config);
+template <typename T>
+bool Render(const char* name, std::deque<T>& deq, const Config& config)
+{
+    return RenderForwardRange(name, deq, config);
 }
 
 bool Render(const char* name, std::string& value, const Config& config)

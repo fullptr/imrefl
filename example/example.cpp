@@ -13,19 +13,13 @@
 
 enum class pet { cat, dog, dragon };
 
-struct entity {
-    [[=ImRefl::readonly]]
-    std::vector<pet> pets = {pet::cat, pet::cat, pet::dragon};
-
-
-    std::pair<int, float> p1;
-    std::pair<int, float> p2;
-};
-
 struct world
 {
-    [[=ImRefl::readonly]]
-    entity e;
+    [[=ImRefl::color]]
+    std::array<float, 3> color;
+
+    [[=ImRefl::slider(0, 100)]]
+    std::deque<int> data = {1, 2, 3, 4};
 };
 
 int main()
