@@ -392,7 +392,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
             [&](Normal) {
                 const T step = 1; // Only used for integral types
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
                 }
                 bool changed = false;
@@ -408,7 +408,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto min = static_cast<T>(slider.min);
                 const auto max = static_cast<T>(slider.max);
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
                 }
                 bool changed = false;
@@ -425,7 +425,7 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
                 const auto max = static_cast<T>(drag.max);
                 const auto speed = drag.speed;
     
-                if (config.in_line) {
+                if (config.in_line && !arr.empty()) {
                     return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
                 }
                 bool changed = false;
@@ -532,24 +532,30 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
 {
     ImGuiID guard{name};
     bool changed = false;
+
+    const ImGuiStyle& style = ImGui::GetStyle();
     if (value.has_value()) {
-        if (ImGui::Button("Delete")) {
-            value = {};
-            changed = true;
-        } else {
-            ImGui::SameLine();
-            changed = Render(name, *value, config);
+        bool should_remove = false;
+        if (ImGui::Button("Remove")) {
+            should_remove = true;
         }
-    }
-    else {
-        if (ImGui::Button("New")) {
+
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+        changed = Render(name, *value, config) || should_remove;
+
+        if (should_remove) {
+            value = {};     // Delay this so as not to pass invalid memory to Render
+        }
+    } else {
+        if (ImGui::Button("Add", ImVec2(ImGui::CalcItemWidth(), ImGui::GetFrameHeight()))) {
             value.emplace();
             changed = true;
-        } else {
-            ImGui::SameLine();
-            ImGui::Text("%s", name);
         }
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        ImGui::Text("%s", name);
     }
+
     return changed;
 }
 
@@ -569,10 +575,12 @@ template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
 {
     ImGuiID guard{name};
-    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+    const ImGuiStyle& style = ImGui::GetStyle();
 
+    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
     bool changed = false;
-    ImGui::Text("%s", name);
+
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
     if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
             ImGuiID id{index};
@@ -583,11 +591,15 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
         }
         ImGui::EndCombo();
     }
+    
+    ImGui::SameLine(0, style.ItemInnerSpacing.x);
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
         if (index == value.index()) {
-            changed = Render("", std::get<index>(value), config) || changed;
+            changed = Render(name, std::get<index>(value), config) || changed;
         }
     }
+
     return changed;
 }
 
