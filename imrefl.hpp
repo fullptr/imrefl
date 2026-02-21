@@ -248,6 +248,9 @@ inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
 template <typename T>
 bool Render(const char* name, T& val, const Config& config);
 
+template <typename T>
+bool Render(const char* name, const T& val, const Config& config);
+
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, T& value, const Config& config);
 
@@ -631,6 +634,18 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     }
 
     return changed;
+}
+
+template <typename T>
+bool Render(const char* name, const T& val, const Config& config)
+{
+    T val_mutable = val;
+
+    ImGui::BeginDisabled();
+    Render(name, val_mutable, config);
+    ImGui::EndDisabled();
+
+    return false;
 }
 
 template <typename T>
