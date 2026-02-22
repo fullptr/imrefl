@@ -260,46 +260,46 @@ template <std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, R& range, const Config& config)
 {
     ImGuiID id{name};
-    if (!config.non_resizable) {
-        const float button_size = ImGui::GetFrameHeight();
-        const ImGuiStyle& style = ImGui::GetStyle();
-        
-        if constexpr (can_push_pop_front<R>) {
-            ImGuiID id{"front"};
-            ImGui::Text("Front:");
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                range.pop_front();
-            }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("+", {button_size, button_size})) {
-                range.emplace_front();
-            }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-        }
-
-        if constexpr (can_push_pop_back<R>) {
-            ImGuiID id{"back"};
-            ImGui::Text("Back:");
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                range.pop_back();
-            }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("+", {button_size, button_size})) {
-                range.emplace_back();
-            }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-        }
-    }
-
     bool changed = false;
     if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+        if (!config.non_resizable) {
+            const float button_size = ImGui::GetFrameHeight();
+            const ImGuiStyle& style = ImGui::GetStyle();
+
+            if constexpr (can_push_pop_front<R>) {
+                ImGuiID id{"front"};
+                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                    range.pop_front();
+                }
+                ImGui::SameLine(0, style.ItemInnerSpacing.x);
+                if (ImGui::Button("+", {button_size, button_size})) {
+                    range.emplace_front();
+                }
+            }
+        }
+
         size_t i = 0;
         for (auto& element : range) {
             changed = Render(std::format("[{}]", i).c_str(), element, config) || changed; 
             ++i;
         }
+
+        if (!config.non_resizable) {
+            const float button_size = ImGui::GetFrameHeight();
+            const ImGuiStyle& style = ImGui::GetStyle();
+            
+            if constexpr (can_push_pop_back<R>) {
+                ImGuiID id{"back"};
+                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                    range.pop_back();
+                }
+                ImGui::SameLine(0, style.ItemInnerSpacing.x);
+                if (ImGui::Button("+", {button_size, button_size})) {
+                    range.emplace_back();
+                }
+            }
+        }
+
         ImGui::TreePop();
     }
     return changed;
@@ -391,7 +391,8 @@ bool Render(const char* name, T& val, const Config& config)
     const auto visitor = overloaded{
         [&](Normal) {
             const T step = 1; // Only used for integral types
-            return ImGui::InputScalar(name, num_type<T>(), &val, std::integral<T> ? &step : nullptr);
+            const T fast_step = 10;
+            return ImGui::InputScalar(name, num_type<T>(), &val, &step, &fast_step);
         },
         [&](Slider slider) {
             const auto min = static_cast<T>(slider.min);
