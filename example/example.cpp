@@ -20,6 +20,8 @@ enum class pet { cat, dog, dragon };
 
 struct world
 {
+    const pet p = pet::dog;
+
     [[=ImRefl::slider(0, 100)]]
     std::list<int> data = {1, 2, 3, 4};
 

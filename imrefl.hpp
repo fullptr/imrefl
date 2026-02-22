@@ -342,13 +342,11 @@ bool Render(const char* name, T& val, const Config& config);
 template <arithmetic T>
 bool Render(const char* name, const T& val, const Config& config);
 
+// Don't need const versions of these since the const arithmetic
+// overload will delegate to them instead.
 bool Render(const char* name, char& c, const Config& config);
 bool Render(const char* name, long double& x, const Config& config);
 bool Render(const char* name, bool& value, const Config& config);
-
-bool Render(const char* name, const char& c, const Config& config);
-bool Render(const char* name, const long double& x, const Config& config);
-bool Render(const char* name, const bool& value, const Config& config);
 
 template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config);
@@ -408,6 +406,16 @@ bool Render(const char* name, T& x, const Config& config);
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, const T& x, const Config& config);
 
+template <typename T>
+bool DelegateToNonConst(const char* name, const T& value, const Config& config)
+{
+    T mutable_value = value;
+    ImGui::BeginDisabled();
+    Render(name, mutable_value, config);
+    ImGui::EndDisabled();
+    return false;
+}
+
 // End of forward decls
 
 template <typename T> requires std::is_scoped_enum_v<T>
@@ -444,26 +452,7 @@ bool Render(const char* name, T& value, const Config& config)
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, const T& value, const Config& config)
 {
-    ImGuiID guard{name};
-    bool changed = false;
-    if (config.radio) {
-        ImGui::Text("%s", name);
-        template for (constexpr auto e : enums_of<T>()) {
-            constexpr auto enum_name = std::meta::identifier_of(e);
-            ImGui::SameLine();
-            ImGui::RadioButton(enum_name.data(), value == [:e:]);
-        }
-    } else {
-        const auto value_name = enum_to_string(value);
-        if (ImGui::BeginCombo(name, value_name)) {
-            template for (constexpr auto e : enums_of<T>()) {
-                constexpr auto enum_name = std::meta::identifier_of(e);
-                ImGui::Selectable(enum_name.data(), value == [:e:]);
-            }
-            ImGui::EndCombo();
-        }
-    }
-    return false;
+    return DelegateToNonConst(name, value, config);
 }
 
 template <arithmetic T>
@@ -494,11 +483,7 @@ bool Render(const char* name, T& val, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, const T& val, const Config& config)
 {
-    T mutable_copy = val;
-    ImGui::BeginDisabled();
-    Render(name, mutable_copy, config);
-    ImGui::EndDisabled();
-    return false;
+    return DelegateToNonConst(name, val, config);
 }
 
 // Treat char as a single character string, rather than an integral
@@ -509,15 +494,6 @@ bool Render(const char* name, char& c, const Config& config)
         c = buffer[0];
         return true;
     }
-    return false;
-}
-
-bool Render(const char* name, const char& c, const Config& config)
-{
-    char buffer[2] = {c, '\0'};
-    ImGui::BeginDisabled();
-    ImGui::InputText(name, buffer, sizeof(buffer));
-    ImGui::EndDisabled();
     return false;
 }
 
@@ -533,25 +509,9 @@ bool Render(const char* name, long double& x, const Config& config)
     return false;
 }
 
-bool Render(const char* name, const long double& x, const Config& config)
-{
-    const double temp = static_cast<const double>(x);
-    Render(name, temp, config);
-    return false;
-}
-
 bool Render(const char* name, bool& value, const Config& config)
 {
     return ImGui::Checkbox(name, &value);
-}
-
-bool Render(const char* name, const bool& value, const Config& config)
-{
-    bool mutable_copy = val;
-    ImGui::BeginDisabled();
-    Render(name, mutable_copy, config);
-    ImGui::EndDisabled();
-    return false;
 }
 
 template <typename T>
