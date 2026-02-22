@@ -11,21 +11,24 @@
 
 #include <print>
 
+#include <forward_list>
+#include <vector>
+#include <deque>
+#include <list>
+
 enum class pet { cat, dog, dragon };
-
-struct entity {
-    [[=ImRefl::readonly]]
-    std::vector<pet> pets = {pet::cat, pet::cat, pet::dragon};
-
-
-    std::pair<int, float> p1;
-    std::pair<int, float> p2;
-};
 
 struct world
 {
-    [[=ImRefl::readonly]]
-    entity e;
+    [[=ImRefl::slider(0, 100)]]
+    std::list<int> data = {1, 2, 3, 4};
+
+    std::forward_list<float> fl = {1.0f, 10.0f, 24.0f};
+
+    [[=ImRefl::color]]
+    std::deque<glm::vec3> colors = {{1, 1, 0}, {1, 0, 1}};
+
+    std::vector<int> more_data = {6, 7, 8};
 };
 
 int main()
