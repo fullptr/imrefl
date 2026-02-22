@@ -26,11 +26,7 @@ struct world
     [[=ImRefl::in_line]]
     const float data2[2] = {1.0f, 2.0f};
 
-    [[=ImRefl::string]]
-    char name[64] = "matt cummins";
-
-    [[=ImRefl::string]]
-    const char name2[64] = "matt cummins";
+    const std::pair<int, pet> pets = {3, pet::dragon};
 };
 
 int main()
@@ -72,7 +68,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Settings",  w);
+        ImRefl::Input("Settings", w, ImReflInputFlags_DefaultOpen);
         ImGui::End();
         ImGui::Render();
 

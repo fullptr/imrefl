@@ -344,6 +344,18 @@ bool RenderArithmeticN(const char* name, T* val, std::size_t count, const Config
     return std::visit(visitor, config.scalar_style);
 }
 
+// A helper function that renders a const variable by making a mutable
+// copy and calling the mutable overload for Render.
+template <typename T>
+bool DelegateToNonConst(const char* name, const T& value, const Config& config)
+{
+    T mutable_value = value;
+    ImGui::BeginDisabled();
+    Render(name, mutable_value, config);
+    ImGui::EndDisabled();
+    return false;
+}
+
 template <arithmetic T>
 bool RenderArithmeticN(const char* name, const T* val, std::size_t count, const Config& config)
 {
@@ -351,7 +363,7 @@ bool RenderArithmeticN(const char* name, const T* val, std::size_t count, const 
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
     for (std::size_t i = 0; i != count; ++i) {
         ImGuiID id{i};
-        DelegateToNonConst("", val[i], config);
+        Render("", val[i], config);
         ImGui::PopItemWidth();
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     }
@@ -416,6 +428,7 @@ bool Render(const char* name, const std::string& value, const Config& config);
 #ifdef IMREFL_GLM
 template <int Size, arithmetic T, glm::qualifier Qual>
 bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& config);
+
 template <int Size, arithmetic T, glm::qualifier Qual>
 bool Render(const char* name, const glm::vec<Size, T, Qual>& value, const Config& config);
 #endif
@@ -443,16 +456,6 @@ bool Render(const char* name, T& x, const Config& config);
 
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, const T& x, const Config& config);
-
-template <typename T>
-bool DelegateToNonConst(const char* name, const T& value, const Config& config)
-{
-    T mutable_value = value;
-    ImGui::BeginDisabled();
-    Render(name, mutable_value, config);
-    ImGui::EndDisabled();
-    return false;
-}
 
 // End of forward decls
 
