@@ -101,11 +101,30 @@ template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; }
 template <typename T>
 concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
 
-template <typename E>
-    requires std::is_scoped_enum_v<E>
+template <typename T>
+concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
+
+template <typename T>
+concept aggregate = std::meta::is_aggregate_type(^^T);
+
+template<typename T>
+concept can_push_pop_back = requires(T t)
+{
+    { t.emplace_back() };
+    { t.pop_back() };
+};
+
+template<typename T>
+concept can_push_pop_front = requires(T t)
+{
+    { t.emplace_front() };
+    { t.pop_front() };
+};
+
+template <scoped_enum T>
 consteval auto enums_of()
 {
-    return std::define_static_array(std::meta::enumerators_of(^^E));
+    return std::define_static_array(std::meta::enumerators_of(^^T));
 }
 
 template <typename T>
@@ -115,10 +134,10 @@ consteval auto nsdm_of()
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
 }
 
-template <typename E> requires std::is_scoped_enum_v<E>
-constexpr const char* enum_to_string(E value)
+template <scoped_enum T>
+constexpr const char* enum_to_string(T value)
 {
-    template for (constexpr auto e : enums_of<E>()) { 
+    template for (constexpr auto e : enums_of<T>()) {
         if (value == [:e:]) {
             return std::meta::identifier_of(e).data();
         }
@@ -229,7 +248,6 @@ constexpr ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
 {
     ImGuiTreeNodeFlags tree_node_flags = 0;
     tree_node_flags |= (input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
-
     return tree_node_flags;
 }
 
@@ -239,23 +257,8 @@ inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
     for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
     bool open = ImGui::TreeNodeEx(label, flags);
     for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
-
     return open;
 }
-
-template<typename T>
-concept can_push_pop_back = requires(T t)
-{
-    { t.emplace_back() };
-    { t.pop_back() };
-};
-
-template<typename T>
-concept can_push_pop_front = requires(T t)
-{
-    { t.emplace_front() };
-    { t.pop_front() };
-};
 
 template <std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, R& range, const Config& config)
@@ -380,10 +383,10 @@ bool Render(const char* name, T& val, const Config& config);
 template <typename T>
 bool Render(const char* name, const T& val, const Config& config);
 
-template <typename T> requires std::is_scoped_enum_v<T>
+template <scoped_enum T>
 bool Render(const char* name, T& value, const Config& config);
 
-template <typename T> requires std::is_scoped_enum_v<T>
+template <scoped_enum T>
 bool Render(const char* name, const T& value, const Config& config);
 
 template <scalar T>
@@ -451,15 +454,15 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config);
 template <typename... Ts>
 bool Render(const char* name, const std::variant<Ts...>& value, const Config& config);
 
-template <typename T> requires (std::meta::is_aggregate_type(^^T))
+template <aggregate T>
 bool Render(const char* name, T& x, const Config& config);
 
-template <typename T> requires (std::meta::is_aggregate_type(^^T))
+template <aggregate T>
 bool Render(const char* name, const T& x, const Config& config);
 
 // End of forward decls
 
-template <typename T> requires std::is_scoped_enum_v<T>
+template <scoped_enum T>
 bool Render(const char* name, T& value, const Config& config)
 {
     ImGuiID guard{name};
@@ -490,7 +493,7 @@ bool Render(const char* name, T& value, const Config& config)
     return changed;
 }
 
-template <typename T> requires std::is_scoped_enum_v<T>
+template <scoped_enum T>
 bool Render(const char* name, const T& value, const Config& config)
 {
     return DelegateToNonConst(name, value, config);
@@ -837,8 +840,7 @@ bool Render(const char* name, const std::variant<Ts...>& value, const Config& co
     return false;
 }
 
-template <typename T>
-    requires (std::meta::is_aggregate_type(^^T))
+template <aggregate T>
 bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
 {
     ImGuiID guard{name};
@@ -869,8 +871,7 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     return changed;
 }
 
-template <typename T>
-    requires (std::meta::is_aggregate_type(^^T))
+template <aggregate T>
 bool Render(const char* name, const T& x, [[maybe_unused]] const Config& config)
 {
     ImGuiID guard{name};
