@@ -99,7 +99,7 @@ struct Config
 template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 
 template <typename T>
-concept arithmetic = (std::integral<T> || std::floating_point<T>) && !(std::is_same_v<T, bool>);
+concept scalar = (std::integral<T> || std::floating_point<T>) && !(std::is_same_v<T, bool>);
 
 template <typename E>
     requires std::is_scoped_enum_v<E>
@@ -177,9 +177,9 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-// Ensures that the given meta::info has exactly one of the arithmetic
+// Ensures that the given meta::info has exactly one of the scalar
 // visual styles, or none.
-consteval bool check_arithmetic_style(std::meta::info info)
+consteval bool check_scalar_style(std::meta::info info)
 {
     std::size_t style_count = 0;
     if (has_annotation<Normal>(info)) { ++style_count; }
@@ -191,7 +191,7 @@ consteval bool check_arithmetic_style(std::meta::info info)
 template <std::meta::info info>
 constexpr Config get_config()
 {
-    static_assert(check_arithmetic_style(info), "too many visual styles given for arithmetic type");
+    static_assert(check_scalar_style(info), "too many visual styles given for scalar type");
 
     Config config;
     if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
@@ -321,8 +321,8 @@ bool RenderForwardRange(const char* name, const R& range, const Config& config)
     return false; 
 }
 
-template <arithmetic T>
-bool RenderArithmeticN(const char* name, T* val, std::size_t count, const Config& config)
+template <scalar T>
+bool RenderScalarN(const char* name, T* val, std::size_t count, const Config& config)
 {
     const auto visitor = overloaded{
         [&](Normal) {
@@ -356,8 +356,8 @@ bool DelegateToNonConst(const char* name, const T& value, const Config& config)
     return false;
 }
 
-template <arithmetic T>
-bool RenderArithmeticN(const char* name, const T* val, std::size_t count, const Config& config)
+template <scalar T>
+bool RenderScalarN(const char* name, const T* val, std::size_t count, const Config& config)
 {
     ImGui::BeginGroup();
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
@@ -386,13 +386,13 @@ bool Render(const char* name, T& value, const Config& config);
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, const T& value, const Config& config);
 
-template <arithmetic T>
+template <scalar T>
 bool Render(const char* name, T& val, const Config& config);
 
-template <arithmetic T>
+template <scalar T>
 bool Render(const char* name, const T& val, const Config& config);
 
-// Don't need const versions of these since the const arithmetic
+// Don't need const versions of these since the const scalar
 // overload will delegate to them instead.
 bool Render(const char* name, char& c, const Config& config);
 bool Render(const char* name, long double& x, const Config& config);
@@ -426,10 +426,10 @@ bool Render(const char* name, std::string& value, const Config& config);
 bool Render(const char* name, const std::string& value, const Config& config);
 
 #ifdef IMREFL_GLM
-template <int Size, arithmetic T, glm::qualifier Qual>
+template <int Size, scalar T, glm::qualifier Qual>
 bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& config);
 
-template <int Size, arithmetic T, glm::qualifier Qual>
+template <int Size, scalar T, glm::qualifier Qual>
 bool Render(const char* name, const glm::vec<Size, T, Qual>& value, const Config& config);
 #endif
 
@@ -496,13 +496,13 @@ bool Render(const char* name, const T& value, const Config& config)
     return DelegateToNonConst(name, value, config);
 }
 
-template <arithmetic T>
+template <scalar T>
 bool Render(const char* name, T& val, const Config& config)
 {
-    return RenderArithmeticN(name, &val, 1, config);
+    return RenderScalarN(name, &val, 1, config);
 }
 
-template <arithmetic T>
+template <scalar T>
 bool Render(const char* name, const T& val, const Config& config)
 {
     return DelegateToNonConst(name, val, config);
@@ -571,10 +571,10 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
         }
     }
 
-    // Arithmetic spans can be rendered in a single line if specified.
-    if constexpr (arithmetic<T>) {
+    // scalar spans can be rendered in a single line if specified.
+    if constexpr (scalar<T>) {
         if (config.in_line) {
-            return RenderArithmeticN(name, arr.data(), arr.size(), config);
+            return RenderScalarN(name, arr.data(), arr.size(), config);
         }
     }
 
@@ -606,10 +606,10 @@ bool Render(const char* name, std::span<const T> arr, const Config& config)
         }
     }
 
-    // Arithmetic spans can be rendered in a single line if specified.
-    if constexpr (arithmetic<T>) {
+    // scalar spans can be rendered in a single line if specified.
+    if constexpr (scalar<T>) {
         if (config.in_line) {
-            return RenderArithmeticN(name, arr.data(), arr.size(), config);
+            return RenderScalarN(name, arr.data(), arr.size(), config);
         }
     }
 
@@ -683,13 +683,13 @@ bool Render(const char* name, const std::string& value, const Config& config)
 }
 
 #ifdef IMREFL_GLM
-template <int Size, arithmetic T, glm::qualifier Qual>
+template <int Size, scalar T, glm::qualifier Qual>
 bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& config)
 {
     return Render(name, std::span{&value[0], Size}, config);
 }
 
-template <int Size, arithmetic T, glm::qualifier Qual>
+template <int Size, scalar T, glm::qualifier Qual>
 bool Render(const char* name, const glm::vec<Size, T, Qual>& value, const Config& config)
 {
     return Render(name, std::span{&value[0], Size}, config);
