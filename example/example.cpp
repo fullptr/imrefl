@@ -28,7 +28,9 @@ struct world
     [[=ImRefl::color]]
     std::deque<glm::vec3> colors = {{1, 1, 0}, {1, 0, 1}};
 
-    std::vector<int> more_data = {6, 7, 8};
+    const std::vector<int> more_data = {6, 7, 8};
+
+    const float x = 5;
 };
 
 int main()

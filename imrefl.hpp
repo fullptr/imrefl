@@ -11,6 +11,7 @@
 #include <optional>
 #include <print>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 typedef int ImReflInputFlags;
@@ -305,52 +306,107 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
     return changed;
 }
 
+template <std::ranges::forward_range R>
+bool RenderForwardRange(const char* name, const R& range, const Config& config)
+{
+    ImGuiID id{name};
+    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+        size_t i = 0;
+        for (auto& element : range) {
+            Render(std::format("[{}]", i).c_str(), element, config); 
+            ++i;
+        }
+        ImGui::TreePop();
+    }
+    return false; 
+}
+
 
 // Forward decls
 
 template <typename T>
 bool Render(const char* name, T& val, const Config& config);
 
+template <typename T>
+bool Render(const char* name, const T& val, const Config& config);
+
 template <typename T> requires std::is_scoped_enum_v<T>
 bool Render(const char* name, T& value, const Config& config);
 
+template <typename T> requires std::is_scoped_enum_v<T>
+bool Render(const char* name, const T& value, const Config& config);
+
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config);
+
+template <arithmetic T>
+bool Render(const char* name, const T& val, const Config& config);
 
 bool Render(const char* name, char& c, const Config& config);
 bool Render(const char* name, long double& x, const Config& config);
 bool Render(const char* name, bool& value, const Config& config);
 
+bool Render(const char* name, const char& c, const Config& config);
+bool Render(const char* name, const long double& x, const Config& config);
+bool Render(const char* name, const bool& value, const Config& config);
+
 template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config);
+
+template <typename T>
+bool Render(const char* name, std::span<const T> arr, const Config& config);
 
 template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, T (&arr)[N], const Config& config);
 
 template <typename T, std::size_t N> requires (N > 0)
+bool Render(const char* name, const T (&arr)[N], const Config& config);
+
+template <typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config);
+
+template <typename T, std::size_t N> requires (N > 0)
+bool Render(const char* name, const std::array<T, N>& arr, const Config& config);
 
 template <std::ranges::forward_range R>
 bool Render(const char* name, R& range, const Config& config);
 
+template <std::ranges::forward_range R>
+bool Render(const char* name, const R& range, const Config& config);
+
 bool Render(const char* name, std::string& value, const Config& config);
+bool Render(const char* name, const std::string& value, const Config& config);
 
 #ifdef IMREFL_GLM
 template <int Size, arithmetic T, glm::qualifier Qual>
 bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& config);
+template <int Size, arithmetic T, glm::qualifier Qual>
+bool Render(const char* name, const glm::vec<Size, T, Qual>& value, const Config& config);
 #endif
 
 template <typename L, typename R>
 bool Render(const char* name, std::pair<L, R>& value, const Config& config);
 
+template <typename L, typename R>
+bool Render(const char* name, const std::pair<L, R>& value, const Config& config);
+
 template <typename T>
 bool Render(const char* name, std::optional<T>& value, const Config& config);
+
+template <typename T>
+bool Render(const char* name, const std::optional<T>& value, const Config& config);
 
 template <typename... Ts>
 bool Render(const char* name, std::variant<Ts...>& value, const Config& config);
 
+template <typename... Ts>
+bool Render(const char* name, const std::variant<Ts...>& value, const Config& config);
+
 template <typename T> requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, const Config& config);
+
+template <typename T> requires (std::meta::is_aggregate_type(^^T))
+bool Render(const char* name, const T& x, const Config& config);
 
 // End of forward decls
 
@@ -385,6 +441,31 @@ bool Render(const char* name, T& value, const Config& config)
     return changed;
 }
 
+template <typename T> requires std::is_scoped_enum_v<T>
+bool Render(const char* name, const T& value, const Config& config)
+{
+    ImGuiID guard{name};
+    bool changed = false;
+    if (config.radio) {
+        ImGui::Text("%s", name);
+        template for (constexpr auto e : enums_of<T>()) {
+            constexpr auto enum_name = std::meta::identifier_of(e);
+            ImGui::SameLine();
+            ImGui::RadioButton(enum_name.data(), value == [:e:]);
+        }
+    } else {
+        const auto value_name = enum_to_string(value);
+        if (ImGui::BeginCombo(name, value_name)) {
+            template for (constexpr auto e : enums_of<T>()) {
+                constexpr auto enum_name = std::meta::identifier_of(e);
+                ImGui::Selectable(enum_name.data(), value == [:e:]);
+            }
+            ImGui::EndCombo();
+        }
+    }
+    return false;
+}
+
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config)
 {
@@ -410,6 +491,16 @@ bool Render(const char* name, T& val, const Config& config)
     return std::visit(visitor, config.scalar_style);
 }
 
+template <arithmetic T>
+bool Render(const char* name, const T& val, const Config& config)
+{
+    T mutable_copy = val;
+    ImGui::BeginDisabled();
+    Render(name, mutable_copy, config);
+    ImGui::EndDisabled();
+    return false;
+}
+
 // Treat char as a single character string, rather than an integral
 bool Render(const char* name, char& c, const Config& config)
 {
@@ -418,6 +509,15 @@ bool Render(const char* name, char& c, const Config& config)
         c = buffer[0];
         return true;
     }
+    return false;
+}
+
+bool Render(const char* name, const char& c, const Config& config)
+{
+    char buffer[2] = {c, '\0'};
+    ImGui::BeginDisabled();
+    ImGui::InputText(name, buffer, sizeof(buffer));
+    ImGui::EndDisabled();
     return false;
 }
 
@@ -433,9 +533,25 @@ bool Render(const char* name, long double& x, const Config& config)
     return false;
 }
 
+bool Render(const char* name, const long double& x, const Config& config)
+{
+    const double temp = static_cast<const double>(x);
+    Render(name, temp, config);
+    return false;
+}
+
 bool Render(const char* name, bool& value, const Config& config)
 {
     return ImGui::Checkbox(name, &value);
+}
+
+bool Render(const char* name, const bool& value, const Config& config)
+{
+    bool mutable_copy = val;
+    ImGui::BeginDisabled();
+    Render(name, mutable_copy, config);
+    ImGui::EndDisabled();
+    return false;
 }
 
 template <typename T>
@@ -493,6 +609,13 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
     return RenderForwardRange(name, arr, config);
 }
 
+template <typename T>
+bool Render(const char* name, std::span<const T> arr, const Config& config)
+{
+    ImGui::Text("span<const T> WIP");
+    return false;
+}
+
 template <typename T, std::size_t N>
     requires (N > 0)
 bool Render(const char* name, T (&arr)[N], const Config& config)
@@ -502,13 +625,33 @@ bool Render(const char* name, T (&arr)[N], const Config& config)
 
 template <typename T, std::size_t N>
     requires (N > 0)
+bool Render(const char* name, const T (&arr)[N], const Config& config)
+{
+    return Render(name, std::span<const T>{arr, N}, config);
+}
+
+template <typename T, std::size_t N>
+    requires (N > 0)
 bool Render(const char* name, std::array<T, N>& arr, const Config& config)
 {
     return Render(name, std::span<T>{arr}, config);
 }
 
+template <typename T, std::size_t N>
+    requires (N > 0)
+bool Render(const char* name, const std::array<T, N>& arr, const Config& config)
+{
+    return Render(name, std::span<const T>{arr}, config);
+}
+
 template <std::ranges::forward_range R>
 bool Render(const char* name, R& range, const Config& config)
+{
+    return RenderForwardRange(name, range, config);
+}
+
+template <std::ranges::forward_range R>
+bool Render(const char* name, const R& range, const Config& config)
 {
     return RenderForwardRange(name, range, config);
 }
@@ -533,9 +676,21 @@ bool Render(const char* name, std::string& value, const Config& config)
     );
 }
 
+bool Render(const char* name, const std::string& value, const Config& config)
+{
+    ImGui::Text("%s: %s", name, value.c_str());
+    return false;
+}
+
 #ifdef IMREFL_GLM
 template <int Size, arithmetic T, glm::qualifier Qual>
 bool Render(const char* name, glm::vec<Size, T, Qual>& value, const Config& config)
+{
+    return Render(name, std::span{&value[0], Size}, config);
+}
+
+template <int Size, arithmetic T, glm::qualifier Qual>
+bool Render(const char* name, const glm::vec<Size, T, Qual>& value, const Config& config)
 {
     return Render(name, std::span{&value[0], Size}, config);
 }
@@ -552,6 +707,16 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config)
     changed = Render("second", value.second, config) || changed;
 
     return changed;
+}
+
+template <typename L, typename R>
+bool Render(const char* name, const std::pair<L, R>& value, const Config& config)
+{
+    ImGuiID guard{name};
+    ImGui::Text("%s", name);
+    Render("first", value.first, config);
+    Render("second", value.second, config);
+    return false;
 }
 
 template <typename T>
@@ -584,6 +749,21 @@ bool Render(const char* name, std::optional<T>& value, const Config& config)
     }
 
     return changed;
+}
+
+template <typename T>
+bool Render(const char* name, const std::optional<T>& value, const Config& config)
+{
+    ImGuiID guard{name};
+
+    const ImGuiStyle& style = ImGui::GetStyle();
+    if (value.has_value()) {
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+        Render(name, *value, config);
+    } else {
+        ImGui::Text("%s: <empty>", name);
+    }
+    return false;
 }
 
 template <typename... Ts>
@@ -630,6 +810,26 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config)
     return changed;
 }
 
+template <typename... Ts>
+bool Render(const char* name, const std::variant<Ts...>& value, const Config& config)
+{
+    ImGuiID guard{name};
+    const ImGuiStyle& style = ImGui::GetStyle();
+
+    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+    bool changed = false;
+
+    ImGui::SameLine(0, style.ItemInnerSpacing.x);
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+    template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+        if (index == value.index()) {
+            Render(name, std::get<index>(value), config);
+        }
+    }
+
+    return false;
+}
+
 template <typename T>
     requires (std::meta::is_aggregate_type(^^T))
 bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
@@ -648,9 +848,11 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
                     ImGui::SeparatorText(separator->title);
                 }
 
-                if constexpr (has_annotation<Readonly>(member)) { ImGui::BeginDisabled(); }
-                changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
-                if constexpr (has_annotation<Readonly>(member)) { ImGui::EndDisabled(); }
+                if constexpr (has_annotation<Readonly>(member)) {
+                    Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]), new_config);
+                } else {
+                    changed = Render(std::meta::identifier_of(member).data(), x.[:member:], new_config) || changed;
+                }
             }
         }
 
@@ -658,6 +860,33 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     }
 
     return changed;
+}
+
+template <typename T>
+    requires (std::meta::is_aggregate_type(^^T))
+bool Render(const char* name, const T& x, [[maybe_unused]] const Config& config)
+{
+    ImGuiID guard{name};
+
+    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+        template for (constexpr auto member : nsdm_of<T>()) {
+            if constexpr (!has_annotation<Ignore>(member)) {
+                // Previous config does not propagate down to the current struct (with the exception of input_flags)
+                Config new_config = get_config<member>();
+                new_config.input_flags = config.input_flags;
+
+                if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                    ImGui::SeparatorText(separator->title);
+                }
+
+                Render(std::meta::identifier_of(member).data(), x.[:member:], new_config);
+            }
+        }
+
+        ImGui::TreePop();
+    }
+
+    return false;
 }
 
 template <typename T>
