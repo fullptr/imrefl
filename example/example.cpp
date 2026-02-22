@@ -20,13 +20,9 @@ enum class pet { cat, dog, dragon };
 
 struct world
 {
-    [[=ImRefl::in_line]]
-    float data[2] = {1.0f, 2.0f};
+    std::variant<int, float, std::string> data4 = 5;
+    const std::variant<int, float, std::string> data5 = 5; 
 
-    [[=ImRefl::in_line]]
-    const float data2[2] = {1.0f, 2.0f};
-
-    const std::pair<int, pet> pets = {3, pet::dragon};
 };
 
 int main()

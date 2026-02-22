@@ -701,12 +701,9 @@ bool Render(const char* name, std::pair<L, R>& value, const Config& config)
 {
     ImGuiID guard{name};
     ImGui::Text("%s", name);
-
-    bool changed = false;
-    changed = Render("first", value.first, config) || changed;
-    changed = Render("second", value.second, config) || changed;
-
-    return changed;
+    const bool first_changed = Render("first", value.first, config);
+    const bool second_changed = Render("second", value.second, config);
+    return first_changed || second_changed;
 }
 
 template <typename L, typename R>
@@ -814,11 +811,20 @@ template <typename... Ts>
 bool Render(const char* name, const std::variant<Ts...>& value, const Config& config)
 {
     ImGuiID guard{name};
+    ImGui::BeginDisabled();
     const ImGuiStyle& style = ImGui::GetStyle();
 
     static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
-    bool changed = false;
 
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
+    if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            ImGuiID id{index};
+            ImGui::Selectable(type_names[index]);
+        }
+        ImGui::EndCombo();
+    }
+    
     ImGui::SameLine(0, style.ItemInnerSpacing.x);
     ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
     template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
@@ -827,6 +833,7 @@ bool Render(const char* name, const std::variant<Ts...>& value, const Config& co
         }
     }
 
+    ImGui::EndDisabled();
     return false;
 }
 
