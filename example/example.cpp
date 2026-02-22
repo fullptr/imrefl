@@ -20,15 +20,11 @@ enum class pet { cat, dog, dragon };
 
 struct world
 {
-    [[=ImRefl::slider(0, 100)]]
-    std::list<int> data = {1, 2, 3, 4};
+    std::variant<int, float, std::string> data4 = 5;
+    const std::variant<int, float, std::string> data5 = 5; 
 
-    std::forward_list<float> fl = {1.0f, 10.0f, 24.0f};
-
-    [[=ImRefl::color]]
-    std::deque<glm::vec3> colors = {{1, 1, 0}, {1, 0, 1}};
-
-    std::vector<int> more_data = {6, 7, 8};
+    bool flag = false;
+    const bool flag2 = true;
 };
 
 int main()
@@ -70,7 +66,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Settings",  w);
+        ImRefl::Input("Settings", w, ImReflInputFlags_DefaultOpen);
         ImGui::End();
         ImGui::Render();
 
