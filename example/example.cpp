@@ -20,19 +20,17 @@ enum class pet { cat, dog, dragon };
 
 struct world
 {
-    const pet p = pet::dog;
+    [[=ImRefl::in_line]]
+    float data[2] = {1.0f, 2.0f};
 
-    [[=ImRefl::slider(0, 100)]]
-    std::list<int> data = {1, 2, 3, 4};
+    [[=ImRefl::in_line]]
+    const float data2[2] = {1.0f, 2.0f};
 
-    std::forward_list<float> fl = {1.0f, 10.0f, 24.0f};
+    [[=ImRefl::string]]
+    char name[64] = "matt cummins";
 
-    [[=ImRefl::color]]
-    std::deque<glm::vec3> colors = {{1, 1, 0}, {1, 0, 1}};
-
-    const std::vector<int> more_data = {6, 7, 8};
-
-    const float x = 5;
+    [[=ImRefl::string]]
+    const char name2[64] = "matt cummins";
 };
 
 int main()

@@ -321,6 +321,44 @@ bool RenderForwardRange(const char* name, const R& range, const Config& config)
     return false; 
 }
 
+template <arithmetic T>
+bool RenderArithmeticN(const char* name, T* val, std::size_t count, const Config& config)
+{
+    const auto visitor = overloaded{
+        [&](Normal) {
+            const T step = 1; // Only used for integral types
+            return ImGui::InputScalarN(name, num_type<T>(), val, count, &step);
+        },
+        [&](Slider slider) {
+            const auto min = static_cast<T>(slider.min);
+            const auto max = static_cast<T>(slider.max);
+            return ImGui::SliderScalarN(name, num_type<T>(), val, count, &min, &max);
+        },
+        [&](Drag drag) {
+            const auto min = static_cast<T>(drag.min);
+            const auto max = static_cast<T>(drag.max);
+            const auto speed = drag.speed;
+            return ImGui::DragScalarN(name, num_type<T>(), val, count, speed, &min, &max);
+        }
+    };
+    return std::visit(visitor, config.scalar_style);
+}
+
+template <arithmetic T>
+bool RenderArithmeticN(const char* name, const T* val, std::size_t count, const Config& config)
+{
+    ImGui::BeginGroup();
+    ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
+    for (std::size_t i = 0; i != count; ++i) {
+        ImGuiID id{i};
+        DelegateToNonConst("", val[i], config);
+        ImGui::PopItemWidth();
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+    }
+    ImGui::Text("%s", name);
+    ImGui::EndGroup();
+    return false;
+}
 
 // Forward decls
 
@@ -458,26 +496,7 @@ bool Render(const char* name, const T& value, const Config& config)
 template <arithmetic T>
 bool Render(const char* name, T& val, const Config& config)
 {
-    const auto visitor = overloaded{
-        [&](Normal) {
-            const T step = 1; // Only used for integral types
-            const T fast_step = 10;
-            return ImGui::InputScalar(name, num_type<T>(), &val, &step, &fast_step);
-        },
-        [&](Slider slider) {
-            const auto min = static_cast<T>(slider.min);
-            const auto max = static_cast<T>(slider.max);
-            return ImGui::SliderScalar(name, num_type<T>(), &val, &min, &max);
-        },
-        [&](Drag drag) {
-            const auto min = static_cast<T>(drag.min);
-            const auto max = static_cast<T>(drag.max);
-            const auto speed = drag.speed;
-            return ImGui::DragScalar(name, num_type<T>(), &val, speed, &min, &max);
-        }
-    };
-
-    return std::visit(visitor, config.scalar_style);
+    return RenderArithmeticN(name, &val, 1, config);
 }
 
 template <arithmetic T>
@@ -514,55 +533,45 @@ bool Render(const char* name, bool& value, const Config& config)
     return ImGui::Checkbox(name, &value);
 }
 
+bool Render(const char* name, const bool& value, const Config& config)
+{
+    return DelegateToNonConst(name, value, config);
+}
+
 template <typename T>
 bool Render(const char* name, std::span<T> arr, const Config& config)
 {
-    if constexpr (arithmetic<T>) {
-        if constexpr (^^T == ^^char) {
-            if (config.is_string) {
-                return ImGui::InputText(name, arr.data(), arr.size());
-            }
+    // Chars arrays to be treated as string buffers.
+    if constexpr (^^T == ^^char) {
+        if (config.is_string) {
+            return ImGui::InputText(name, arr.data(), arr.size());
         }
+    }
     
-        // Only float permits the color options
-        if constexpr (^^T == ^^float) {
-            switch (arr.size()) {
-                case 3: {
-                    if (config.color_wheel) {
-                        return ImGui::ColorPicker3(name, arr.data());
-                    } else if (config.color) {
-                        return ImGui::ColorEdit3(name, arr.data());
-                    }
-                } break;
-                case 4: {
-                    if (config.color_wheel) {
-                        return ImGui::ColorPicker4(name, arr.data());
-                    } else if (config.color) {
-                        return ImGui::ColorEdit4(name, arr.data());
-                    }
-                } break;
-            }
-        }
-
-        if (config.in_line) {
-            const auto visitor = overloaded{
-                [&](Normal) {
-                    const T step = 1; // Only used for integral types
-                    return ImGui::InputScalarN(name, num_type<T>(), arr.data(), arr.size(), std::integral<T> ? &step : nullptr);
-                },
-                [&](Slider slider) {
-                    const auto min = static_cast<T>(slider.min);
-                    const auto max = static_cast<T>(slider.max);
-                    return ImGui::SliderScalarN(name, num_type<T>(), arr.data(), arr.size(), &min, &max);
-                },
-                [&](Drag drag) {
-                    const auto min = static_cast<T>(drag.min);
-                    const auto max = static_cast<T>(drag.max);
-                    const auto speed = drag.speed;
-                    return ImGui::DragScalarN(name, num_type<T>(), arr.data(), arr.size(), speed, &min, &max);
+    // Float arrays of size 3 and 4 can be treated as colors 
+    if constexpr (^^T == ^^float) {
+        switch (arr.size()) {
+            case 3: {
+                if (config.color_wheel) {
+                    return ImGui::ColorPicker3(name, arr.data());
+                } else if (config.color) {
+                    return ImGui::ColorEdit3(name, arr.data());
                 }
-            };
-            return std::visit(visitor, config.scalar_style);
+            } break;
+            case 4: {
+                if (config.color_wheel) {
+                    return ImGui::ColorPicker4(name, arr.data());
+                } else if (config.color) {
+                    return ImGui::ColorEdit4(name, arr.data());
+                }
+            } break;
+        }
+    }
+
+    // Arithmetic spans can be rendered in a single line if specified.
+    if constexpr (arithmetic<T>) {
+        if (config.in_line) {
+            return RenderArithmeticN(name, arr.data(), arr.size(), config);
         }
     }
 
@@ -572,8 +581,36 @@ bool Render(const char* name, std::span<T> arr, const Config& config)
 template <typename T>
 bool Render(const char* name, std::span<const T> arr, const Config& config)
 {
-    ImGui::Text("span<const T> WIP");
-    return false;
+    // Chars arrays to be treated as string buffers.
+    if constexpr (^^T == ^^char) {
+        if (config.is_string) {
+            ImGui::Text("%s: ", name);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
+            return false;
+        }
+    }
+    
+    // Float arrays of size 3 and 4 can be treated as colors 
+    if constexpr (^^T == ^^float) {
+        if (arr.size() == 3 || arr.size() == 4) {
+            float copy[4] = {};
+            std::copy(arr.begin(), arr.end(), std::begin(copy));
+            ImGui::BeginDisabled();
+            Render(name, std::span{copy, arr.size()}, config);
+            ImGui::EndDisabled();
+            return false;
+        }
+    }
+
+    // Arithmetic spans can be rendered in a single line if specified.
+    if constexpr (arithmetic<T>) {
+        if (config.in_line) {
+            return RenderArithmeticN(name, arr.data(), arr.size(), config);
+        }
+    }
+
+    return RenderForwardRange(name, arr, config);
 }
 
 template <typename T, std::size_t N>
