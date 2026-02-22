@@ -23,6 +23,8 @@ struct world
     std::variant<int, float, std::string> data4 = 5;
     const std::variant<int, float, std::string> data5 = 5; 
 
+    bool flag = false;
+    const bool flag2 = true;
 };
 
 int main()
