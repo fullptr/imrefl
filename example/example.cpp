@@ -16,16 +16,20 @@
 #include <deque>
 #include <list>
 
-enum class pet { cat, dog, dragon };
-
 struct world
 {
-    std::variant<int, float, std::string> data4 = 5;
-    const std::variant<int, float, std::string> data5 = 5; 
-
-    bool flag = false;
-    const bool flag2 = true;
+    std::unique_ptr<int>   unique;
+    std::shared_ptr<float> shared;
+    std::weak_ptr<float>   weak;
+    std::weak_ptr<int>     expired;
 };
+
+
+auto get_expired()
+{
+    auto x = std::make_shared<int>(5.0f);
+    return std::weak_ptr{x};
+}
 
 int main()
 {
@@ -58,6 +62,10 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
 
     world w = {};
+    w.unique = std::make_unique<int>(5);
+    w.shared = std::make_shared<float>(6.0f);
+    w.weak   = w.shared;
+    w.expired = get_expired();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 

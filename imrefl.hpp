@@ -7,6 +7,7 @@
 
 #include <concepts>
 #include <format>
+#include <memory>
 #include <meta>
 #include <optional>
 #include <print>
@@ -454,6 +455,24 @@ bool Render(const char* name, std::variant<Ts...>& value, const Config& config);
 template <typename... Ts>
 bool Render(const char* name, const std::variant<Ts...>& value, const Config& config);
 
+template <typename T, typename Deleter>
+bool Render(const char* name, std::unique_ptr<T, Deleter>& value, const Config& config);
+
+template <typename T, typename Deleter>
+bool Render(const char* name, const std::unique_ptr<T, Deleter>& value, const Config& config);
+
+template <typename T>
+bool Render(const char* name, std::shared_ptr<T>& value, const Config& config);
+
+template <typename T>
+bool Render(const char* name, const std::shared_ptr<T>& value, const Config& config);
+
+template <typename T>
+bool Render(const char* name, std::weak_ptr<T>& value, const Config& config);
+
+template <typename T>
+bool Render(const char* name, const std::weak_ptr<T>& value, const Config& config);
+
 template <aggregate T>
 bool Render(const char* name, T& x, const Config& config);
 
@@ -838,6 +857,70 @@ bool Render(const char* name, const std::variant<Ts...>& value, const Config& co
 
     ImGui::EndDisabled();
     return false;
+}
+
+template <typename T, typename Deleter>
+bool Render(const char* name, std::unique_ptr<T, Deleter>& value, const Config& config)
+{
+    if (value) {
+        return Render(name, *value, config);
+    } else {
+        ImGui::Text("%s: <nullopt>", name);
+        return false;
+    }
+}
+
+template <typename T, typename Deleter>
+bool Render(const char* name, const std::unique_ptr<T, Deleter>& value, const Config& config)
+{
+    if (value) {
+        return Render(name, *value, config);
+    } else {
+        ImGui::Text("%s: <nullopt>", name);
+        return false;
+    }
+}
+
+template <typename T>
+bool Render(const char* name, std::shared_ptr<T>& value, const Config& config)
+{
+    if (value) {
+        return Render(name, *value, config);
+    } else {
+        ImGui::Text("%s: <nullopt>", name);
+        return false;
+    }
+}
+
+template <typename T>
+bool Render(const char* name, const std::shared_ptr<T>& value, const Config& config)
+{
+    if (value) {
+        return Render(name, *value, config);
+    } else {
+        ImGui::Text("%s: <nullopt>", name);
+        return false;
+    }
+}
+
+template <typename T>
+bool Render(const char* name, std::weak_ptr<T>& value, const Config& config)
+{
+    if (value.expired()) {
+        ImGui::Text("%s: <expired>", name);
+        return false;
+    }
+    return Render(name, value.lock(), config);
+}
+
+template <typename T>
+bool Render(const char* name, const std::weak_ptr<T>& value, const Config& config)
+{
+    if (value.expired()) {
+        ImGui::Text("%s: <expired>", name);
+        return false;
+    }
+    return Render(name, value.lock(), config);
 }
 
 template <aggregate T>
