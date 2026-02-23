@@ -20,6 +20,12 @@
 
 struct world
 {
+    std::vector<std::string> names2 = {
+        "Gandalf",
+        "Frodo",
+        "Galadriel",
+        "Aragorn"
+    };
     std::vector<std::string> names = {
         "Gandalf",
         "Frodo",

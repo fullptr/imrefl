@@ -291,12 +291,12 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
                 ImGui::SameLine();
                 ImGui::Selectable(std::format("[{}]", i).c_str());
                 if (ImGui::BeginDragDropSource()) {
-                    ImGui::SetDragDropPayload("ITEM", &i, sizeof(size_t));
+                    ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
                     ImGui::Text("Move");
                     ImGui::EndDragDropSource();
                 }
                 if (ImGui::BeginDragDropTarget()) {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ITEM")) {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(name)) {
                         size_t index = *(const size_t*)payload->Data;
                         if (index != i) {
                             std::swap(range[index], element);
