@@ -286,24 +286,27 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
         size_t i = 0;
         for (auto& element : range) {
             ImGuiID id(i);
-            changed = Render("", element, config) || changed; 
+            const std::string index_name = std::format("[{}]", i);
             if constexpr (std::ranges::random_access_range<R>) {
+                changed = Render("", element, config) || changed;
                 ImGui::SameLine();
-                ImGui::Selectable(std::format("[{}]", i).c_str());
+                ImGui::Selectable(index_name.c_str());
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
-                    ImGui::Text("Move");
                     ImGui::EndDragDropSource();
                 }
                 if (ImGui::BeginDragDropTarget()) {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(name)) {
-                        size_t index = *(const size_t*)payload->Data;
+                        const size_t index = *(const size_t*)payload->Data;
                         if (index != i) {
                             std::swap(range[index], element);
                         }
                     }
                     ImGui::EndDragDropTarget();
                 }
+            }
+            else {
+                changed = Render(index_name.c_str(), element, config) || changed;
             }
             ++i;
         }

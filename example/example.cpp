@@ -15,18 +15,14 @@
 #include <vector>
 #include <deque>
 #include <list>
+#include <set>
+#include <array>
 #include <vector>
 #include <string>
 
 struct world
 {
-    std::vector<std::string> names2 = {
-        "Gandalf",
-        "Frodo",
-        "Galadriel",
-        "Aragorn"
-    };
-    std::vector<std::string> names = {
+    std::list<std::string> names = {
         "Gandalf",
         "Frodo",
         "Galadriel",
