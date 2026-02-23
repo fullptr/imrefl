@@ -22,7 +22,7 @@
 
 struct world
 {
-    std::list<std::string> names = {
+    std::forward_list<std::string> names = {
         "Gandalf",
         "Frodo",
         "Galadriel",
