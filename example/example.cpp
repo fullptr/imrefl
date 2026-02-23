@@ -15,13 +15,17 @@
 #include <vector>
 #include <deque>
 #include <list>
+#include <vector>
+#include <string>
 
 struct world
 {
-    std::unique_ptr<int>   unique;
-    std::shared_ptr<float> shared;
-    std::weak_ptr<float>   weak;
-    std::weak_ptr<int>     expired;
+    std::vector<std::string> names = {
+        "Gandalf",
+        "Frodo",
+        "Galadriel",
+        "Aragorn"
+    };
 };
 
 
@@ -62,10 +66,6 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
 
     world w = {};
-    w.unique = std::make_unique<int>(5);
-    w.shared = std::make_shared<float>(6.0f);
-    w.weak   = w.shared;
-    w.expired = get_expired();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
