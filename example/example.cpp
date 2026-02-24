@@ -18,18 +18,24 @@
 #include <set>
 #include <array>
 #include <vector>
+#include <unordered_map>
 #include <string>
 
 struct world
 {
-    std::forward_list<std::string> names = {
-        "Gandalf",
-        "Frodo",
-        "Galadriel",
-        "Aragorn"
-    };
+    float color[3] = {1, 1, 0};
 };
 
+template <>
+struct TypeConfig<world>
+{
+    static consteval std::vector<std::meta::info> annotations(std::meta::info info) {
+        if (info == ^^world::color) {
+            return { ^^ImRefl::color };
+        }
+        return {};
+    }
+};
 
 auto get_expired()
 {

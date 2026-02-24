@@ -22,6 +22,14 @@ enum ImReflInputFlags_ {
     ImReflInputFlags_DefaultOpen    = 1 << 0,
 };
 
+template <typename T>
+struct TypeConfig
+{
+    static consteval std::vector<std::meta::info> annotations(std::meta::info info) {
+        return {};
+    }
+};
+
 namespace ImRefl {
 
 struct Ignore {};
@@ -208,8 +216,8 @@ consteval bool check_scalar_style(std::meta::info info)
     return style_count < 2;
 }
 
-template <std::meta::info info>
-constexpr Config get_config()
+template <typename StructType, std::meta::info info>
+consteval Config get_config()
 {
     static_assert(check_scalar_style(info), "too many visual styles given for scalar type");
 
@@ -242,6 +250,12 @@ constexpr Config get_config()
         config.is_string = true;
     }
 
+    const auto extra = TypeConfig<StructType>::annotations(info);
+    for (const auto& anno : extra) {
+        if (anno == ^^ImRefl::color) {
+            config.color = true; 
+        }
+    }
     return config;
 }
 
@@ -955,7 +969,7 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
                 // Previous config does not propagate down to the current struct (with the exception of input_flags)
-                Config new_config = get_config<member>();
+                Config new_config = get_config<T, member>();
                 new_config.input_flags = config.input_flags;
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
@@ -985,7 +999,7 @@ bool Render(const char* name, const T& x, [[maybe_unused]] const Config& config)
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
                 // Previous config does not propagate down to the current struct (with the exception of input_flags)
-                Config new_config = get_config<member>();
+                Config new_config = get_config<T, member>();
                 new_config.input_flags = config.input_flags;
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
