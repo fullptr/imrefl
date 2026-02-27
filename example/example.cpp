@@ -20,22 +20,33 @@
 #include <vector>
 #include <string>
 
-struct world
+enum class weapon
 {
-    std::forward_list<std::string> names = {
-        "Gandalf",
-        "Frodo",
-        "Galadriel",
-        "Aragorn"
-    };
+    none,
+    sword,
+    bow,
+    staff,
+    wand,
+    axe
 };
 
-
-auto get_expired()
+struct player
 {
-    auto x = std::make_shared<int>(5.0f);
-    return std::weak_ptr{x};
-}
+    std::string name         = "Link";
+    bool        invulnerable = false;
+    int         health       = 100;
+
+    [[=ImRefl::slider(1, 50)]]
+    int level = 14;
+
+    [[=ImRefl::ignore]]
+    double secret_information = 3.14159;
+
+    [[=ImRefl::readonly]]
+    float attack_modifier = 3.5f;
+
+    weapon current_weapon = weapon::sword;
+};
 
 int main()
 {
@@ -67,7 +78,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    world w = {};
+    player p = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -76,7 +87,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Settings", w, ImReflInputFlags_DefaultOpen);
+        ImRefl::Input("Player", p, ImReflInputFlags_DefaultOpen);
         ImGui::End();
         ImGui::Render();
 
