@@ -301,13 +301,9 @@ bool Render(const char* name, const T& x);
 
 // End of forward decls
 
-constexpr ImGuiTreeNodeFlags get_tree_node_flags()
+inline bool TreeNodeExNoDisable(const char* label)
 {
-    return ImGuiTreeNodeFlags_DefaultOpen;
-}
-
-inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
-{
+    const auto flags = ImGuiTreeNodeFlags_DefaultOpen;
     const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
     for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
     bool open = ImGui::TreeNodeEx(label, flags);
@@ -320,7 +316,7 @@ bool RenderForwardRange(const char* name, R& range)
 {
     ImGuiID id{name};
     bool changed = false;
-    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
+    if (TreeNodeExNoDisable(name)) {
         if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_front<R>) {
             ImGuiID id{"front"};
             const float button_size = ImGui::GetFrameHeight();
@@ -384,7 +380,7 @@ template <Config config, std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, const R& range)
 {
     ImGuiID id{name};
-    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
+    if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
             Render<config>(std::format("[{}]", i).c_str(), element); 
@@ -889,7 +885,7 @@ bool Render(const char* name, T& x)
     ImGuiID guard{name};
     bool changed = false;
 
-    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
+    if (TreeNodeExNoDisable(name)) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
                 constexpr Config new_config = { .self = member };
@@ -917,7 +913,7 @@ bool Render(const char* name, const T& x)
 {
     ImGuiID guard{name};
 
-    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
+    if (TreeNodeExNoDisable(name)) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
                 constexpr Config new_config = { .self = member };
