@@ -303,10 +303,10 @@ bool Render(const char* name, const T& x);
 
 inline bool TreeNodeExNoDisable(const char* label)
 {
-    const auto flags = ImGuiTreeNodeFlags_DefaultOpen;
+    const int flags = ImGuiTreeNodeFlags_DefaultOpen;
     const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
     for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
-    bool open = ImGui::TreeNodeEx(label, flags);
+    const bool open = ImGui::TreeNodeEx(label, flags);
     for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
     return open;
 }
