@@ -15,13 +15,6 @@
 #include <utility>
 #include <variant>
 
-typedef int ImReflInputFlags;
-
-enum ImReflInputFlags_ {
-    ImReflInputFlags_None           = 0,
-    ImReflInputFlags_DefaultOpen    = 1 << 0,
-};
-
 namespace ImRefl {
 
 struct Ignore {};
@@ -82,10 +75,15 @@ struct ImGuiID
     ~ImGuiID() { ImGui::PopID(); }
 };
 
+enum class ScalarStyle
+{
+    Input,
+    Slider,
+    Drag,
+};
+
 struct Config
 {
-    ImReflInputFlags input_flags = 0;
-
     bool in_line         = false;
     bool non_resizable   = false;
     bool color           = false;
@@ -209,7 +207,7 @@ consteval bool check_scalar_style(std::meta::info info)
 }
 
 template <std::meta::info info>
-constexpr Config get_config()
+consteval Config get_config()
 {
     static_assert(check_scalar_style(info), "too many visual styles given for scalar type");
 
@@ -245,11 +243,9 @@ constexpr Config get_config()
     return config;
 }
 
-constexpr ImGuiTreeNodeFlags get_tree_node_flags(ImReflInputFlags input_flags)
+constexpr ImGuiTreeNodeFlags get_tree_node_flags()
 {
-    ImGuiTreeNodeFlags tree_node_flags = 0;
-    tree_node_flags |= (input_flags & ImReflInputFlags_DefaultOpen) ? ImGuiTreeNodeFlags_DefaultOpen : 0;
-    return tree_node_flags;
+    return ImGuiTreeNodeFlags_DefaultOpen;
 }
 
 inline bool TreeNodeExNoDisable(const char* label, ImGuiTreeNodeFlags flags)
@@ -266,7 +262,7 @@ bool RenderForwardRange(const char* name, R& range, const Config& config)
 {
     ImGuiID id{name};
     bool changed = false;
-    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         if (!config.non_resizable) {
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
@@ -336,7 +332,7 @@ template <std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, const R& range, const Config& config)
 {
     ImGuiID id{name};
-    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         size_t i = 0;
         for (auto& element : range) {
             Render(std::format("[{}]", i).c_str(), element, config); 
@@ -951,12 +947,10 @@ bool Render(const char* name, T& x, [[maybe_unused]] const Config& config)
     ImGuiID guard{name};
     bool changed = false;
 
-    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                // Previous config does not propagate down to the current struct (with the exception of input_flags)
-                Config new_config = get_config<member>();
-                new_config.input_flags = config.input_flags;
+                constexpr Config new_config = get_config<member>();
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
@@ -981,12 +975,10 @@ bool Render(const char* name, const T& x, [[maybe_unused]] const Config& config)
 {
     ImGuiID guard{name};
 
-    if (TreeNodeExNoDisable(name, get_tree_node_flags(config.input_flags))) {
+    if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                // Previous config does not propagate down to the current struct (with the exception of input_flags)
-                Config new_config = get_config<member>();
-                new_config.input_flags = config.input_flags;
+                constexpr Config new_config = get_config<member>();
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
@@ -1010,10 +1002,9 @@ bool Render(const char* name, T& val, const Config& config)
 
 }  // namespace detail
 
-bool Input(const char* name, auto& value, ImReflInputFlags flags = 0)
+bool Input(const char* name, auto& value)
 {
     detail::Config config;
-    config.input_flags = flags;
 
     return detail::Render(name, value, config);
 }

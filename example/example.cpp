@@ -87,7 +87,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Player", p, ImReflInputFlags_DefaultOpen);
+        ImRefl::Input("Player", p);
         ImGui::End();
         ImGui::Render();
 
