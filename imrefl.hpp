@@ -384,9 +384,20 @@ bool RenderForwardRange(const char* name, const R& range)
     return false; 
 }
 
+consteval bool check_scalar_style(std::meta::info info)
+{
+    std::size_t count = 0;
+    if (has_annotation<Normal>(info)) { ++count; }
+    if (has_annotation<Slider>(info)) { ++count; }
+    if (has_annotation<Drag>(info))   { ++count; }
+    return count < 2;
+}
+
 template <Config config, scalar T>
 bool RenderScalarN(const char* name, T* val, std::size_t count)
 {
+    static_assert(check_scalar_style(config.self), "too many visual styles given for scalar type");
+
     if constexpr (constexpr auto style = fetch_annotation<Slider>(config.self)) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
