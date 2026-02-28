@@ -377,7 +377,7 @@ bool RenderForwardRange(const char* name, R& range)
     ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
-        if (!config.non_resizable) {
+        if constexpr (!config.non_resizable) {
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
 
@@ -421,7 +421,7 @@ bool RenderForwardRange(const char* name, R& range)
             ++i;
         }
 
-        if (!config.non_resizable) {
+        if constexpr (!config.non_resizable) {
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
             
@@ -511,7 +511,7 @@ bool Render(const char* name, T& value)
 {
     ImGuiID guard{name};
     bool changed = false;
-    if (config.radio) {
+    if constexpr (config.radio) {
         ImGui::Text("%s", name);
         template for (constexpr auto e : enums_of<T>()) {
             constexpr auto enum_name = std::meta::identifier_of(e);
@@ -596,26 +596,24 @@ template <Config config, typename T>
 bool Render(const char* name, std::span<T> arr)
 {
     // Chars arrays to be treated as string buffers.
-    if constexpr (^^T == ^^char) {
-        if (config.is_string) {
-            return ImGui::InputText(name, arr.data(), arr.size());
-        }
+    if constexpr ((^^T == ^^char) && config.is_string) {
+        return ImGui::InputText(name, arr.data(), arr.size());
     }
     
     // Float arrays of size 3 and 4 can be treated as colors 
     if constexpr (^^T == ^^float) {
         switch (arr.size()) {
             case 3: {
-                if (config.color_wheel) {
+                if constexpr (config.color_wheel) {
                     return ImGui::ColorPicker3(name, arr.data());
-                } else if (config.color) {
+                } else if constexpr (config.color) {
                     return ImGui::ColorEdit3(name, arr.data());
                 }
             } break;
             case 4: {
-                if (config.color_wheel) {
+                if constexpr (config.color_wheel) {
                     return ImGui::ColorPicker4(name, arr.data());
-                } else if (config.color) {
+                } else if constexpr (config.color) {
                     return ImGui::ColorEdit4(name, arr.data());
                 }
             } break;
@@ -623,10 +621,8 @@ bool Render(const char* name, std::span<T> arr)
     }
 
     // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T>) {
-        if (config.in_line) {
-            return RenderScalarN<config>(name, arr.data(), arr.size());
-        }
+    if constexpr (scalar<T> && config.in_line) {
+        return RenderScalarN<config>(name, arr.data(), arr.size());
     }
 
     return RenderForwardRange<config>(name, arr);
@@ -636,13 +632,11 @@ template <Config config, typename T>
 bool Render(const char* name, std::span<const T> arr)
 {
     // Chars arrays to be treated as string buffers.
-    if constexpr (^^T == ^^char) {
-        if (config.is_string) {
-            ImGui::Text("%s: ", name);
-            ImGui::SameLine();
-            ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
-            return false;
-        }
+    if constexpr ((^^T == ^^char) && config.is_string) {
+        ImGui::Text("%s: ", name);
+        ImGui::SameLine();
+        ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
+        return false;
     }
     
     // Float arrays of size 3 and 4 can be treated as colors 
@@ -658,10 +652,8 @@ bool Render(const char* name, std::span<const T> arr)
     }
 
     // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T>) {
-        if (config.in_line) {
-            return RenderScalarNi<config>(name, arr.data(), arr.size());
-        }
+    if constexpr (scalar<T> && config.in_line) {
+        return RenderScalarNi<config>(name, arr.data(), arr.size());
     }
 
     return RenderForwardRange<config>(name, arr);
