@@ -75,13 +75,6 @@ struct ImGuiID
     ~ImGuiID() { ImGui::PopID(); }
 };
 
-enum class ScalarStyle
-{
-    Input,
-    Slider,
-    Drag,
-};
-
 struct Config
 {
     std::meta::info self = {};
