@@ -888,7 +888,7 @@ bool Render(const char* name, T& x)
     if (TreeNodeExNoDisable(name)) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr Config new_config = { .self = member };
+                constexpr auto new_config = Config{ .self=member };
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
@@ -916,7 +916,7 @@ bool Render(const char* name, const T& x)
     if (TreeNodeExNoDisable(name)) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr Config new_config = { .self = member };
+                constexpr auto new_config = Config{ .self=member };
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
