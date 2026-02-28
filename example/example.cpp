@@ -49,6 +49,9 @@ struct player
     float attack_modifier = 3.5f;
 
     weapon current_weapon = weapon::sword;
+
+    [[=ImRefl::color]]
+    glm::vec3 color = {1, 1, 0};
 };
 
 int main()

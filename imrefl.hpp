@@ -87,8 +87,6 @@ struct Config
     std::meta::info self = {};
 
     bool non_resizable   = false;
-    bool color           = false;
-    bool color_wheel     = false;
     bool radio           = false;
 
     ScalarStyle scalar_style = ScalarStyle::Input;
@@ -226,12 +224,6 @@ consteval Config get_config()
     }
     if constexpr (has_annotation<NonResizable>(info)) {
         config.non_resizable = true;
-    }
-    if constexpr (has_annotation<ColorWheel>(info)) {
-        config.color_wheel = true;
-    }
-    if constexpr (has_annotation<Color>(info)) {
-        config.color = true;
     }
     if constexpr (has_annotation<Radio>(info)) {
         config.radio = true;
@@ -600,16 +592,16 @@ bool Render(const char* name, std::span<T> arr)
     if constexpr (^^T == ^^float) {
         switch (arr.size()) {
             case 3: {
-                if constexpr (config.color_wheel) {
+                if constexpr (has_annotation<ColorWheel>(config.self)) {
                     return ImGui::ColorPicker3(name, arr.data());
-                } else if constexpr (config.color) {
+                } else if constexpr (has_annotation<Color>(config.self)) {
                     return ImGui::ColorEdit3(name, arr.data());
                 }
             } break;
             case 4: {
-                if constexpr (config.color_wheel) {
+                if constexpr (has_annotation<ColorWheel>(config.self)) {
                     return ImGui::ColorPicker4(name, arr.data());
-                } else if constexpr (config.color) {
+                } else if constexpr (has_annotation<Color>(config.self)) {
                     return ImGui::ColorEdit4(name, arr.data());
                 }
             } break;
