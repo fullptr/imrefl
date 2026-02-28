@@ -85,16 +85,6 @@ enum class ScalarStyle
 struct Config
 {
     std::meta::info self = {};
-
-    bool non_resizable   = false;
-    bool radio           = false;
-
-    ScalarStyle scalar_style = ScalarStyle::Input;
-    int         min          = 0;
-    bool        use_min      = false;
-    int         max          = 0;
-    bool        use_max      = false;
-    float       speed        = 1.0f;
 };
 
 // Magic spell to make writing a variant visitor nicer.
@@ -196,40 +186,6 @@ consteval auto num_type()
         case 8: return ImGuiDataType_Double;
     }
     throw "unknown floating point size";
-}
-
-template <std::meta::info info>
-consteval Config get_config()
-{
-    Config config;
-    config.self = info;
-
-    if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
-        config.scalar_style = ScalarStyle::Input;
-    }
-    if constexpr (constexpr auto style = fetch_annotation<Slider>(info)) {
-        config.scalar_style = ScalarStyle::Slider;
-        config.min = style->min;
-        config.use_min = true;
-        config.max = style->max;
-        config.use_max = true;
-    }
-    if constexpr (constexpr auto style = fetch_annotation<Drag>(info)) {
-        config.scalar_style = ScalarStyle::Drag;
-        config.min = style->min;
-        config.use_min = true;
-        config.max = style->max;
-        config.use_max = true;
-        config.speed = style->speed;
-    }
-    if constexpr (has_annotation<NonResizable>(info)) {
-        config.non_resizable = true;
-    }
-    if constexpr (has_annotation<Radio>(info)) {
-        config.radio = true;
-    }
-
-    return config;
 }
 
 // Forward decls
@@ -365,19 +321,16 @@ bool RenderForwardRange(const char* name, R& range)
     ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
-        if constexpr (!config.non_resizable) {
+        if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_front<R>) {
+            ImGuiID id{"front"};
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
-
-            if constexpr (can_push_pop_front<R>) {
-                ImGuiID id{"front"};
-                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                    range.pop_front();
-                }
-                ImGui::SameLine(0, style.ItemInnerSpacing.x);
-                if (ImGui::Button("+", {button_size, button_size})) {
-                    range.emplace_front();
-                }
+            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                range.pop_front();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("+", {button_size, button_size})) {
+                range.emplace_front();
             }
         }
 
@@ -409,19 +362,16 @@ bool RenderForwardRange(const char* name, R& range)
             ++i;
         }
 
-        if constexpr (!config.non_resizable) {
+        if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_back<R>) {
+            ImGuiID id{"back"};
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
-            
-            if constexpr (can_push_pop_back<R>) {
-                ImGuiID id{"back"};
-                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                    range.pop_back();
-                }
-                ImGui::SameLine(0, style.ItemInnerSpacing.x);
-                if (ImGui::Button("+", {button_size, button_size})) {
-                    range.emplace_back();
-                }
+            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                range.pop_back();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            if (ImGui::Button("+", {button_size, button_size})) {
+                range.emplace_back();
             }
         }
 
@@ -448,17 +398,16 @@ bool RenderForwardRange(const char* name, const R& range)
 template <Config config, scalar T>
 bool RenderScalarN(const char* name, T* val, std::size_t count)
 {
-    // TODO: Come back and put the static_cast back in the min/max 
-    if constexpr (config.scalar_style == ScalarStyle::Slider) {
-        const auto min = config.use_min ? &config.min : nullptr;
-        const auto max = config.use_max ? &config.max : nullptr;
-        return ImGui::SliderScalarN(name, num_type<T>(), val, count, min, max);
+    if constexpr (constexpr auto style = fetch_annotation<Slider>(config.self)) {
+        const auto min = static_cast<T>(style->min);
+        const auto max = static_cast<T>(style->max);
+        return ImGui::SliderScalarN(name, num_type<T>(), val, count, &min, &max);
     }
-    else if constexpr (config.scalar_style == ScalarStyle::Drag) {
-        const auto min = config.use_min ? &config.min : nullptr;
-        const auto max = config.use_max ? &config.max : nullptr;
-        const auto speed = config.speed;
-        return ImGui::DragScalarN(name, num_type<T>(), val, count, speed, min, max);
+    else if constexpr (constexpr auto style = fetch_annotation<Drag>(config.self)) {
+        const auto min = static_cast<T>(style->min);
+        const auto max = static_cast<T>(style->max);
+        const auto speed = style->speed;
+        return ImGui::DragScalarN(name, num_type<T>(), val, count, speed, &min, &max);
     }
     else {
         const T step = 1; // Only used for integral types
@@ -499,7 +448,7 @@ bool Render(const char* name, T& value)
 {
     ImGuiID guard{name};
     bool changed = false;
-    if constexpr (config.radio) {
+    if constexpr (has_annotation<Radio>(config.self)) {
         ImGui::Text("%s", name);
         template for (constexpr auto e : enums_of<T>()) {
             constexpr auto enum_name = std::meta::identifier_of(e);
@@ -943,7 +892,7 @@ bool Render(const char* name, T& x)
     if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr Config new_config = get_config<member>();
+                constexpr Config new_config = { .self = member };
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
@@ -971,7 +920,7 @@ bool Render(const char* name, const T& x)
     if (TreeNodeExNoDisable(name, get_tree_node_flags())) {
         template for (constexpr auto member : nsdm_of<T>()) {
             if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr Config new_config = get_config<member>();
+                constexpr Config new_config = { .self = member };
 
                 if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                     ImGui::SeparatorText(separator->title);
