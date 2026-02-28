@@ -84,12 +84,12 @@ enum class ScalarStyle
 
 struct Config
 {
-    bool in_line         = false;
+    std::meta::info self = {};
+
     bool non_resizable   = false;
     bool color           = false;
     bool color_wheel     = false;
     bool radio           = false;
-    bool is_string       = false; // used for formatting char buffers
 
     ScalarStyle scalar_style = ScalarStyle::Input;
     int         min          = 0;
@@ -204,6 +204,8 @@ template <std::meta::info info>
 consteval Config get_config()
 {
     Config config;
+    config.self = info;
+
     if constexpr (constexpr auto style = fetch_annotation<Normal>(info)) {
         config.scalar_style = ScalarStyle::Input;
     }
@@ -222,9 +224,6 @@ consteval Config get_config()
         config.use_max = true;
         config.speed = style->speed;
     }
-    if constexpr (has_annotation<InLine>(info)) {
-        config.in_line = true;
-    }
     if constexpr (has_annotation<NonResizable>(info)) {
         config.non_resizable = true;
     }
@@ -236,9 +235,6 @@ consteval Config get_config()
     }
     if constexpr (has_annotation<Radio>(info)) {
         config.radio = true;
-    }
-    if constexpr (has_annotation<String>(info)) {
-        config.is_string = true;
     }
 
     return config;
@@ -596,7 +592,7 @@ template <Config config, typename T>
 bool Render(const char* name, std::span<T> arr)
 {
     // Chars arrays to be treated as string buffers.
-    if constexpr ((^^T == ^^char) && config.is_string) {
+    if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
         return ImGui::InputText(name, arr.data(), arr.size());
     }
     
@@ -621,7 +617,7 @@ bool Render(const char* name, std::span<T> arr)
     }
 
     // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T> && config.in_line) {
+    if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
         return RenderScalarN<config>(name, arr.data(), arr.size());
     }
 
@@ -632,7 +628,7 @@ template <Config config, typename T>
 bool Render(const char* name, std::span<const T> arr)
 {
     // Chars arrays to be treated as string buffers.
-    if constexpr ((^^T == ^^char) && config.is_string) {
+    if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
         ImGui::Text("%s: ", name);
         ImGui::SameLine();
         ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
@@ -652,7 +648,7 @@ bool Render(const char* name, std::span<const T> arr)
     }
 
     // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T> && config.in_line) {
+    if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
         return RenderScalarNi<config>(name, arr.data(), arr.size());
     }
 
