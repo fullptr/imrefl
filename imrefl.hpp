@@ -350,15 +350,17 @@ bool RenderForwardRange(const char* name, R& range)
         }
 
         if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_back<R>) {
-            ImGuiID id{"back"};
-            const float button_size = ImGui::GetFrameHeight();
-            const ImGuiStyle& style = ImGui::GetStyle();
-            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                range.pop_back();
-            }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("+", {button_size, button_size})) {
-                range.emplace_back();
+            if (!can_push_pop_front<R> || i > 0) {
+                ImGuiID id{"back"};
+                const float button_size = ImGui::GetFrameHeight();
+                const ImGuiStyle& style = ImGui::GetStyle();
+                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                    range.pop_back();
+                }
+                ImGui::SameLine(0, style.ItemInnerSpacing.x);
+                if (ImGui::Button("+", {button_size, button_size})) {
+                    range.emplace_back();
+                }
             }
         }
 
