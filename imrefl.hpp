@@ -944,7 +944,7 @@ bool Render(const char* name, T& val)
 
 bool Input(const char* name, auto& value)
 {
-    constexpr detail::Config config;
+    constexpr auto config = detail::Config{ .self=^^value };
 
     return detail::Render<config>(name, value);
 }
