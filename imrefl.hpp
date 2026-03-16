@@ -590,7 +590,7 @@ bool Render(const char* name, std::span<const T> arr)
 
     // scalar spans can be rendered in a single line if specified.
     if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
-        return RenderScalarNi<config>(name, arr.data(), arr.size());
+        return RenderScalarN<config>(name, arr.data(), arr.size());
     }
 
     return RenderForwardRange<config>(name, arr);
