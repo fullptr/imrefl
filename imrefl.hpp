@@ -325,7 +325,8 @@ bool RenderForwardRange(const char* name, R& range)
         for (auto& element : range) {
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
-            if constexpr (std::ranges::random_access_range<R>) {
+            using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
+            if constexpr (!std::is_const_v<element_type> && std::ranges::random_access_range<R>) {
                 changed = Render<config>("", element) || changed;
                 ImGui::SameLine();
                 ImGui::Selectable(index_name.c_str());
