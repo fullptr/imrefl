@@ -30,6 +30,33 @@ enum class weapon
     axe
 };
 
+class my_type
+{
+    int data = 5;
+public:
+    my_type() = default;
+    int get() const { return data; }
+    void set(int x) { data = x; }
+};
+
+template <ImRefl::Config config>
+struct ImRefl::Renderer<config, my_type>
+{
+    static bool Render(const char* name, my_type& value)
+    {
+        int inner = value.get();
+        if (Renderer<config, int>::Render(name, inner)) {
+            value.set(inner);
+            return true;
+        }
+        return false;
+    }
+    static bool Render(const char* name, const my_type& value)
+    {
+        return ImRefl::DelegateToNonConst<config>(name, value);
+    }
+};
+
 struct player
 {
     int         health       = 100;
@@ -43,13 +70,16 @@ struct player
     std::string name = "Link";
 
     [[=ImRefl::color]]
-    const glm::vec3 pos = {0, 0, 1};
+    glm::vec3 pos = {0, 0, 1};
 
     std::pair<glm::vec3, weapon> pair = {};
 
     std::optional<int> opt = {};
 
     std::shared_ptr<int> ptr = std::make_shared<int>(5);
+
+    [[=ImRefl::readonly]]
+    my_type t = {};
 };
 
 int main()

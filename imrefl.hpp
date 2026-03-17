@@ -27,16 +27,7 @@ struct Renderer
 };
 
 template <Config config, typename T>
-concept renderable =
-    !is_const_type(^^T) &&
-    requires(const char* name, T& val) {
-    { ImRefl::Renderer<config, T>::Render(name, val) }
-        -> std::convertible_to<bool>;
-    };
-
-template <Config config, typename T>
-concept const_renderable =
-    requires(const char* name, const T& val) {
+concept renderable = requires(const char* name, T& val) {
     { ImRefl::Renderer<config, T>::Render(name, val) }
         -> std::convertible_to<bool>;
     };
@@ -873,8 +864,6 @@ bool Input(const char* name, T& value)
 {
     constexpr auto config = Config{ .self=^^value };
     if constexpr (renderable<config, T>) {
-        return Renderer<config, T>::Render(name, value);
-    } else if constexpr (const_renderable<config, T>) {
         return Renderer<config, T>::Render(name, value);
     } else {
         static_assert(false && "not implemented for this type"); 
