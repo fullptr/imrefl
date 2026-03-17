@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #endif
 
+#include <print>
 #include <concepts>
 #include <format>
 #include <memory>
@@ -205,12 +206,6 @@ bool Render(const char* name, T& val);
 template <Config config, scalar T>
 bool Render(const char* name, const T& val);
 
-template <Config config, typename T>
-bool Render(const char* name, std::span<T> arr);
-
-template <Config config, typename T>
-bool Render(const char* name, std::span<const T> arr);
-
 template <Config config, typename T, std::size_t N> requires (N > 0)
 bool Render(const char* name, T (&arr)[N]);
 
@@ -315,8 +310,9 @@ bool RenderForwardRange(const char* name, R& range)
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
             using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
+            using element_type_nocvref = std::remove_const_t<element_type>;
             if constexpr (!is_const_type(^^element_type) && std::ranges::random_access_range<R>) {
-                changed = Render<config>("", element) || changed;
+                changed = Renderer<config, element_type_nocvref>::Render("", element) || changed;
                 ImGui::SameLine();
                 ImGui::Selectable(index_name.c_str());
                 if (ImGui::BeginDragDropSource()) {
@@ -334,7 +330,7 @@ bool RenderForwardRange(const char* name, R& range)
                 }
             }
             else {
-                changed = Render<config>(index_name.c_str(), element) || changed;
+                changed = Renderer<config, element_type_nocvref>::Render(index_name.c_str(), element) || changed;
             }
             ++i;
         }
@@ -362,11 +358,14 @@ bool RenderForwardRange(const char* name, R& range)
 template <Config config, std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, const R& range)
 {
+    using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
+    using element_type_nocvref = std::remove_const_t<element_type>;
+
     ImGuiID id{name};
     if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
-            Render<config>(std::format("[{}]", i).c_str(), element); 
+            Renderer<config, element_type_nocvref>::Render(std::format("[{}]", i).c_str(), element); 
             ++i;
         }
         ImGui::TreePop();
@@ -434,85 +433,93 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
 }
 
 template <Config config, typename T>
-bool Render(const char* name, std::span<T> arr)
+struct Renderer<config, std::span<T>>
 {
-    // Chars arrays to be treated as string buffers.
-    if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
-        return ImGui::InputText(name, arr.data(), arr.size());
-    }
-    
-    // Float arrays of size 3 and 4 can be treated as colors 
-    if constexpr (^^T == ^^float) {
-        switch (arr.size()) {
-            case 3: {
-                if constexpr (has_annotation<ColorWheel>(config.self)) {
-                    return ImGui::ColorPicker3(name, arr.data());
-                } else if constexpr (has_annotation<Color>(config.self)) {
-                    return ImGui::ColorEdit3(name, arr.data());
-                }
-            } break;
-            case 4: {
-                if constexpr (has_annotation<ColorWheel>(config.self)) {
-                    return ImGui::ColorPicker4(name, arr.data());
-                } else if constexpr (has_annotation<Color>(config.self)) {
-                    return ImGui::ColorEdit4(name, arr.data());
-                }
-            } break;
+    static bool Render(const char* name, std::span<T> arr)
+    {
+        // Chars arrays to be treated as string buffers.
+        if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
+            return ImGui::InputText(name, arr.data(), arr.size());
         }
-    }
+        
+        // Float arrays of size 3 and 4 can be treated as colors 
+        if constexpr (^^T == ^^float) {
+            switch (arr.size()) {
+                case 3: {
+                    if constexpr (has_annotation<ColorWheel>(config.self)) {
+                        return ImGui::ColorPicker3(name, arr.data());
+                    } else if constexpr (has_annotation<Color>(config.self)) {
+                        return ImGui::ColorEdit3(name, arr.data());
+                    }
+                } break;
+                case 4: {
+                    if constexpr (has_annotation<ColorWheel>(config.self)) {
+                        return ImGui::ColorPicker4(name, arr.data());
+                    } else if constexpr (has_annotation<Color>(config.self)) {
+                        return ImGui::ColorEdit4(name, arr.data());
+                    }
+                } break;
+            }
+        }
 
-    // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
-        return RenderScalarN<config>(name, arr.data(), arr.size());
-    }
+        // scalar spans can be rendered in a single line if specified.
+        if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
+            return RenderScalarN<config>(name, arr.data(), arr.size());
+        }
 
-    return RenderForwardRange<config>(name, arr);
-}
+        return RenderForwardRange<config>(name, arr);
+    }
+};
 
 template <Config config, typename T>
-bool Render(const char* name, std::span<const T> arr)
+struct Renderer<config, std::span<const T>>
 {
-    // Chars arrays to be treated as string buffers.
-    if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
-        ImGui::Text("%s: ", name);
-        ImGui::SameLine();
-        ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
-        return false;
-    }
-    
-    // Float arrays of size 3 and 4 can be treated as colors 
-    if constexpr (^^T == ^^float) {
-        if (arr.size() == 3 || arr.size() == 4) {
-            float copy[4] = {};
-            std::copy(arr.begin(), arr.end(), std::begin(copy));
-            ImGui::BeginDisabled();
-            Render<config>(name, std::span{copy, arr.size()});
-            ImGui::EndDisabled();
+    static bool Render(const char* name, std::span<const T> arr)
+    {
+        // Chars arrays to be treated as string buffers.
+        if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
+            ImGui::Text("%s: ", name);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
             return false;
         }
-    }
+        
+        // Float arrays of size 3 and 4 can be treated as colors 
+        if constexpr (^^T == ^^float) {
+            if (arr.size() == 3 || arr.size() == 4) {
+                float copy[4] = {};
+                std::copy(arr.begin(), arr.end(), std::begin(copy));
+                ImGui::BeginDisabled();
+                Render<config>(name, std::span{copy, arr.size()});
+                ImGui::EndDisabled();
+                return false;
+            }
+        }
 
-    // scalar spans can be rendered in a single line if specified.
-    if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
-        return RenderScalarN<config>(name, arr.data(), arr.size());
-    }
+        // scalar spans can be rendered in a single line if specified.
+        if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
+            return RenderScalarN<config>(name, arr.data(), arr.size());
+        }
 
-    return RenderForwardRange<config>(name, arr);
-}
+        return RenderForwardRange<config>(name, arr);
+    }
+};
 
 template <Config config, typename T, std::size_t N>
-    requires (N > 0)
-bool Render(const char* name, T (&arr)[N])
+    requires (N > 0) 
+struct Renderer<config, T[N]>
 {
-    return Render<config>(name, std::span<T>{arr, N});
-}
+    using Type = T[N];
+    static bool Render(const char* name, Type& arr)
+    {
+        return Renderer<config, std::span<T>>::Render(name, std::span<T>{arr, N});
+    }
 
-template <Config config, typename T, std::size_t N>
-    requires (N > 0)
-bool Render(const char* name, const T (&arr)[N])
-{
-    return Render<config>(name, std::span<const T>{arr, N});
-}
+    static bool Render(const char* name, const Type& arr)
+    {
+        return Renderer<config, std::span<T>>::Render(name, std::span<const T>{arr, N});
+    }
+};
 
 template <Config config, typename T, std::size_t N>
     requires (N > 0)
