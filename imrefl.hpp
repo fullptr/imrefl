@@ -198,25 +198,19 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
+template <typename... Ts>
+struct Tag {};
+
+consteval auto integer_sequence(std::size_t max)
+{
+    std::vector<std::size_t> values;
+    for (std::size_t i = 0; i != max; ++i) {
+        values.push_back(i);
+    }
+    return std::define_static_array(values);
+}
+
 // Forward decls
-
-template <Config config, typename L, typename R>
-bool Render(const char* name, std::pair<L, R>& value);
-
-template <Config config, typename L, typename R>
-bool Render(const char* name, const std::pair<L, R>& value);
-
-template <Config config, typename T>
-bool Render(const char* name, std::optional<T>& value);
-
-template <Config config, typename T>
-bool Render(const char* name, const std::optional<T>& value);
-
-template <Config config, typename... Ts>
-bool Render(const char* name, std::variant<Ts...>& value);
-
-template <Config config, typename... Ts>
-bool Render(const char* name, const std::variant<Ts...>& value);
 
 template <Config config, typename T, typename Deleter>
 bool Render(const char* name, std::unique_ptr<T, Deleter>& value);
@@ -557,145 +551,139 @@ struct Renderer<config, glm::vec<Size, T, Qual>>
 #endif
 
 template <Config config, typename L, typename R>
-bool Render(const char* name, std::pair<L, R>& value)
+struct Renderer<config, std::pair<L, R>>
 {
-    ImGuiID guard{name};
-    ImGui::Text("%s", name);
-    const bool first_changed = Render<config>("first", value.first);
-    const bool second_changed = Render<config>("second", value.second);
-    return first_changed || second_changed;
-}
-
-template <Config config, typename L, typename R>
-bool Render(const char* name, const std::pair<L, R>& value)
-{
-    ImGuiID guard{name};
-    ImGui::Text("%s", name);
-    Render<config>("first", value.first);
-    Render<config>("second", value.second);
-    return false;
-}
-
-template <Config config, typename T>
-bool Render(const char* name, std::optional<T>& value)
-{
-    ImGuiID guard{name};
-    bool changed = false;
-
-    const ImGuiStyle& style = ImGui::GetStyle();
-    if (value.has_value()) {
-        bool should_remove = false;
-        if (ImGui::Button("Remove")) {
-            should_remove = true;
-        }
-
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
-        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-        changed = Render<config>(name, *value) || should_remove;
-
-        if (should_remove) {
-            value = {};     // Delay this so as not to pass invalid memory to Render
-        }
-    } else {
-        if (ImGui::Button("Add", ImVec2(ImGui::CalcItemWidth(), ImGui::GetFrameHeight()))) {
-            value.emplace();
-            changed = true;
-        }
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+    static bool Render(const char* name, std::pair<L, R>& value)
+    {
+        ImGuiID guard{name};
         ImGui::Text("%s", name);
+        const bool first_changed = Renderer<config, L>::Render("first", value.first);
+        const bool second_changed = Renderer<config, R>::Render("second", value.second);
+        return first_changed || second_changed;
     }
 
-    return changed;
-}
+    static bool Render(const char* name, const std::pair<L, R>& value)
+    {
+        ImGuiID guard{name};
+        ImGui::Text("%s", name);
+        Renderer<config, L>::Render("first", value.first);
+        Renderer<config, R>::Render("second", value.second);
+        return false;
+    }
+};
 
 template <Config config, typename T>
-bool Render(const char* name, const std::optional<T>& value)
+struct Renderer<config, std::optional<T>>
 {
-    ImGuiID guard{name};
+    static bool Render(const char* name, std::optional<T>& value)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
 
-    const ImGuiStyle& style = ImGui::GetStyle();
-    if (value.has_value()) {
-        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-        Render<config>(name, *value);
-    } else {
-        ImGui::Text("%s: <empty>", name);
-    }
-    return false;
-}
+        const ImGuiStyle& style = ImGui::GetStyle();
+        if (value.has_value()) {
+            bool should_remove = false;
+            if (ImGui::Button("Remove")) {
+                should_remove = true;
+            }
 
-template <typename... Ts>
-struct Tag {};
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+            changed = Renderer<config, T>::Render(name, *value) || should_remove;
 
-consteval auto integer_sequence(std::size_t max)
-{
-    std::vector<std::size_t> values;
-    for (std::size_t i = 0; i != max; ++i) {
-        values.push_back(i);
-    }
-    return std::define_static_array(values);
-}
-
-template <Config config, typename... Ts>
-bool Render(const char* name, std::variant<Ts...>& value)
-{
-    ImGuiID guard{name};
-    const ImGuiStyle& style = ImGui::GetStyle();
-
-    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
-    bool changed = false;
-
-    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
-    if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
-        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-            ImGuiID id{index};
-            if (ImGui::Selectable(type_names[index])) {
-                value.template emplace<index>();
+            if (should_remove) {
+                value = {};     // Delay this so as not to pass invalid memory to Render
+            }
+        } else {
+            if (ImGui::Button("Add", ImVec2(ImGui::CalcItemWidth(), ImGui::GetFrameHeight()))) {
+                value.emplace();
                 changed = true;
             }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+            ImGui::Text("%s", name);
         }
-        ImGui::EndCombo();
-    }
-    
-    ImGui::SameLine(0, style.ItemInnerSpacing.x);
-    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-    template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-        if (index == value.index()) {
-            changed = Render<config>(name, std::get<index>(value)) || changed;
-        }
+
+        return changed;
     }
 
-    return changed;
-}
+    static bool Render(const char* name, const std::optional<T>& value)
+    {
+        ImGuiID guard{name};
+
+        const ImGuiStyle& style = ImGui::GetStyle();
+        if (value.has_value()) {
+            ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+            Renderer<config, T>::Render(name, *value);
+        } else {
+            ImGui::Text("%s: <empty>", name);
+        }
+        return false;
+    }
+};
 
 template <Config config, typename... Ts>
-bool Render(const char* name, const std::variant<Ts...>& value)
+struct Renderer<config, std::variant<Ts...>>
 {
-    ImGuiID guard{name};
-    ImGui::BeginDisabled();
-    const ImGuiStyle& style = ImGui::GetStyle();
+    static bool Render(const char* name, std::variant<Ts...>& value)
+    {
+        ImGuiID guard{name};
+        const ImGuiStyle& style = ImGui::GetStyle();
 
-    static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+        static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+        bool changed = false;
 
-    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
-    if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
+        if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+            template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+                ImGuiID id{index};
+                if (ImGui::Selectable(type_names[index])) {
+                    value.template emplace<index>();
+                    changed = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
         template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-            ImGuiID id{index};
-            ImGui::Selectable(type_names[index]);
+            if (index == value.index()) {
+                changed = Renderer<config, Ts...[index]>::Render(name, std::get<index>(value)) || changed;
+            }
         }
-        ImGui::EndCombo();
-    }
-    
-    ImGui::SameLine(0, style.ItemInnerSpacing.x);
-    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-    template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
-        if (index == value.index()) {
-            Render<config>(name, std::get<index>(value));
-        }
+
+        return changed;
     }
 
-    ImGui::EndDisabled();
-    return false;
-}
+    static bool Render(const char* name, const std::variant<Ts...>& value)
+    {
+        ImGuiID guard{name};
+        ImGui::BeginDisabled();
+        const ImGuiStyle& style = ImGui::GetStyle();
+
+        static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
+        if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+            template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+                ImGuiID id{index};
+                ImGui::Selectable(type_names[index]);
+            }
+            ImGui::EndCombo();
+        }
+        
+        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            if (index == value.index()) {
+                Renderer<config, Ts...[index]>::Render(name, std::get<index>(value));
+            }
+        }
+
+        ImGui::EndDisabled();
+        return false;
+    }
+};
 
 template <Config config, typename T, typename Deleter>
 bool Render(const char* name, std::unique_ptr<T, Deleter>& value)

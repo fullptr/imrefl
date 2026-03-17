@@ -44,6 +44,12 @@ struct player
 
     [[=ImRefl::color]]
     const glm::vec3 pos = {0, 0, 1};
+
+    std::pair<glm::vec3, weapon> pair = {};
+
+    std::optional<int> opt = {};
+
+    std::variant<int, std::string> var = 5;
 };
 
 int main()
