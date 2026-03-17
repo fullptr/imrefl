@@ -205,9 +205,6 @@ bool Render(const char* name, T& val);
 template <Config config, scalar T>
 bool Render(const char* name, const T& val);
 
-template <Config config>
-bool Render(const char* name, bool& value);
-
 template <Config config, typename T>
 bool Render(const char* name, std::span<T> arr);
 
@@ -434,18 +431,6 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     ImGui::Text("%s", name);
     ImGui::EndGroup();
     return false;
-}
-
-template <Config config>
-bool Render(const char* name, bool& value)
-{
-    return ImGui::Checkbox(name, &value);
-}
-
-template <Config config>
-bool Render(const char* name, const bool& value)
-{
-    return DelegateToNonConst<config>(name, value);
 }
 
 template <Config config, typename T>
@@ -890,6 +875,20 @@ struct Renderer<config, T>
     }
 
     static bool Render(const char* name, const T& value)
+    {
+        return DelegateToNonConst<config>(name, value);
+    }
+};
+
+template <Config config>
+struct Renderer<config, bool>
+{
+    static bool Render(const char* name, bool& value)
+    {
+        return ImGui::Checkbox(name, &value);
+    }
+
+    static bool Render(const char* name, const bool& value)
     {
         return DelegateToNonConst<config>(name, value);
     }

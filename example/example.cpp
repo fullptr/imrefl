@@ -37,6 +37,7 @@ struct player
     const char c = 'x';
     long double f = 100.0;
     weapon current_weapon = weapon::sword;
+    bool enabled = false;
 
 };
 
