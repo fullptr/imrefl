@@ -21,15 +21,24 @@ struct Config
 };
 
 template <Config config, typename T>
-struct Renderable
+struct Renderer
 {
 };
 
 template <Config config, typename T>
-concept renderable = requires(const char* name, T& val) {
-    { ImRefl::Renderable<config, T>::Render(name, val) }
+concept renderable =
+    !is_const_type(^^T) &&
+    requires(const char* name, T& val) {
+    { ImRefl::Renderer<config, T>::Render(name, val) }
         -> std::convertible_to<bool>;
-};
+    };
+
+template <Config config, typename T>
+concept const_renderable =
+    requires(const char* name, const T& val) {
+    { ImRefl::Renderer<config, T>::Render(name, val) }
+        -> std::convertible_to<bool>;
+    };
 
 struct Ignore {};
 inline static constexpr Ignore ignore {};
@@ -191,7 +200,7 @@ consteval auto num_type()
 // Forward decls
 
 template <Config config, scoped_enum T>
-struct Renderable<config, T>;
+struct Renderer<config, T>;
 
 template <Config config, typename T>
 bool Render(const char* name, T& val);
@@ -910,14 +919,24 @@ template <Config config, typename T>
 bool Render(const char* name, T& value)
 {
     if constexpr (renderable<config, T>) {
-        return Renderable<config, T>::Render(name, value);
+        return Renderer<config, T>::Render(name, value);
+    } else {
+        static_assert(false && "not implemented for this type"); 
+    }
+}
+
+template <Config config, typename T>
+bool Render(const char* name, const T& value)
+{
+    if constexpr (const_renderable<config, T>) {
+        return Renderer<config, T>::Render(name, value);
     } else {
         static_assert(false && "not implemented for this type"); 
     }
 }
 
 template <Config config, scoped_enum T>
-struct Renderable<config, T>
+struct Renderer<config, T>
 {
     static bool Render(const char* name, T& value)
     {
@@ -947,6 +966,11 @@ struct Renderable<config, T>
             }
         }
         return changed;
+    }
+
+    static bool Render(const char* name, const T& value)
+    {
+        return DelegateToNonConst<config>(name, value);
     }
 };
 
