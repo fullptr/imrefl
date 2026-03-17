@@ -199,15 +199,6 @@ consteval auto num_type()
 
 // Forward decls
 
-template <Config config, scoped_enum T>
-struct Renderer<config, T>;
-
-template <Config config, typename T>
-bool Render(const char* name, T& val);
-
-template <Config config, typename T>
-bool Render(const char* name, const T& val);
-
 template <Config config, scalar T>
 bool Render(const char* name, T& val);
 
@@ -298,12 +289,6 @@ bool Render(const char* name, std::weak_ptr<T>& value);
 
 template <Config config, typename T>
 bool Render(const char* name, const std::weak_ptr<T>& value);
-
-template <Config config, aggregate T>
-bool Render(const char* name, T& x);
-
-template <Config config, aggregate T>
-bool Render(const char* name, const T& x);
 
 // End of forward decls
 
@@ -457,18 +442,6 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     ImGui::Text("%s", name);
     ImGui::EndGroup();
     return false;
-}
-
-template <Config config, scalar T>
-bool Render(const char* name, T& val)
-{
-    return RenderScalarN<config>(name, &val, 1);
-}
-
-template <Config config, scalar T>
-bool Render(const char* name, const T& val)
-{
-    return DelegateToNonConst<config>(name, val);
 }
 
 // Treat char as a single character string, rather than an integral
@@ -863,77 +836,75 @@ bool Render(const char* name, const std::weak_ptr<T>& value)
 }
 
 template <Config config, aggregate T>
-bool Render(const char* name, T& x)
+struct Renderer<config, T>
 {
-    ImGuiID guard{name};
-    bool changed = false;
+    static bool Render(const char* name, T& x)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
 
-    if (TreeNodeExNoDisable(name)) {
-        template for (constexpr auto member : nsdm_of<T>()) {
-            if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr auto new_config = Config{ .self=member };
+        if (TreeNodeExNoDisable(name)) {
+            template for (constexpr auto member : nsdm_of<T>()) {
+                if constexpr (!has_annotation<Ignore>(member)) {
+                    constexpr auto new_config = Config{ .self=member };
 
-                if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
-                    ImGui::SeparatorText(separator->title);
-                }
+                    if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                        ImGui::SeparatorText(separator->title);
+                    }
 
-                if constexpr (has_annotation<Readonly>(member)) {
-                    Render<new_config>(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
-                } else {
-                    changed = Render<new_config>(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
+                    using element_type = [:type_of(member):];
+                    if constexpr (has_annotation<Readonly>(member)) {
+                        Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
+                    } else {
+                        changed = Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
+                    }
                 }
             }
+
+            ImGui::TreePop();
         }
 
-        ImGui::TreePop();
+        return changed;
     }
 
-    return changed;
-}
+    static bool Render(const char* name, const T& x)
+    {
+        ImGuiID guard{name};
 
-template <Config config, aggregate T>
-bool Render(const char* name, const T& x)
-{
-    ImGuiID guard{name};
+        if (TreeNodeExNoDisable(name)) {
+            template for (constexpr auto member : nsdm_of<T>()) {
+                if constexpr (!has_annotation<Ignore>(member)) {
+                    constexpr auto new_config = Config{ .self=member };
 
-    if (TreeNodeExNoDisable(name)) {
-        template for (constexpr auto member : nsdm_of<T>()) {
-            if constexpr (!has_annotation<Ignore>(member)) {
-                constexpr auto new_config = Config{ .self=member };
+                    if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                        ImGui::SeparatorText(separator->title);
+                    }
 
-                if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
-                    ImGui::SeparatorText(separator->title);
+                    using element_type = [:type_of(member):];
+                    Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
                 }
-
-                Render<new_config>(std::meta::identifier_of(member).data(), x.[:member:]);
             }
+
+            ImGui::TreePop();
         }
 
-        ImGui::TreePop();
+        return false;
     }
+};
 
-    return false;
-}
-
-template <Config config, typename T>
-bool Render(const char* name, T& value)
+template <Config config, scalar T>
+struct Renderer<config, T>
 {
-    if constexpr (renderable<config, T>) {
-        return Renderer<config, T>::Render(name, value);
-    } else {
-        static_assert(false && "not implemented for this type"); 
+    static bool Render(const char* name, T& val)
+    {
+        return RenderScalarN<config>(name, &val, 1);
     }
-}
 
-template <Config config, typename T>
-bool Render(const char* name, const T& value)
-{
-    if constexpr (const_renderable<config, T>) {
-        return Renderer<config, T>::Render(name, value);
-    } else {
-        static_assert(false && "not implemented for this type"); 
+    static bool Render(const char* name, const T& val)
+    {
+        return DelegateToNonConst<config>(name, val);
     }
-}
+};
 
 template <Config config, scoped_enum T>
 struct Renderer<config, T>
@@ -978,7 +949,13 @@ template <typename T>
 bool Input(const char* name, T& value)
 {
     constexpr auto config = Config{ .self=^^value };
-    return Render<config>(name, value);
+    if constexpr (renderable<config, T>) {
+        return Renderer<config, T>::Render(name, value);
+    } else if constexpr (const_renderable<config, T>) {
+        return Renderer<config, T>::Render(name, value);
+    } else {
+        static_assert(false && "not implemented for this type"); 
+    }
 }
 
 }  // namespace ImRefl
