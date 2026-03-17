@@ -968,4 +968,12 @@ bool Input(const char* name, T& value)
     }
 }
 
+template <typename T>
+bool Input(const char* name, const T& value)
+{
+    
+    constexpr auto config = Config{ .self=^^value };
+    return detail::Render<config>(name, value);
+}
+
 }  // namespace ImRefl
