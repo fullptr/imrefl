@@ -49,7 +49,7 @@ struct player
 
     std::optional<int> opt = {};
 
-    std::variant<int, std::string> var = 5;
+    std::shared_ptr<int> ptr = std::make_shared<int>(5);
 };
 
 int main()

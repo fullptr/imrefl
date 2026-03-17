@@ -210,27 +210,16 @@ consteval auto integer_sequence(std::size_t max)
     return std::define_static_array(values);
 }
 
-// Forward decls
-
-template <Config config, typename T, typename Deleter>
-bool Render(const char* name, std::unique_ptr<T, Deleter>& value);
-
-template <Config config, typename T, typename Deleter>
-bool Render(const char* name, const std::unique_ptr<T, Deleter>& value);
-
 template <Config config, typename T>
-bool Render(const char* name, std::shared_ptr<T>& value);
-
-template <Config config, typename T>
-bool Render(const char* name, const std::shared_ptr<T>& value);
-
-template <Config config, typename T>
-bool Render(const char* name, std::weak_ptr<T>& value);
-
-template <Config config, typename T>
-bool Render(const char* name, const std::weak_ptr<T>& value);
-
-// End of forward decls
+bool RenderPointerAsValue(const char* name, T* value)
+{
+    if (value) {
+        return Renderer<config, T>::Render(name, *value);
+    } else {
+        ImGui::Text("%s: <nullptr>", name);
+        return false;
+    }
+}
 
 inline bool TreeNodeExNoDisable(const char* label)
 {
@@ -329,7 +318,7 @@ bool RenderForwardRange(const char* name, const R& range)
     return false; 
 }
 
-consteval bool check_scalar_style(std::meta::info info)
+consteval bool CheckScalarStyle(std::meta::info info)
 {
     std::size_t count = 0;
     if (has_annotation<Normal>(info)) { ++count; }
@@ -341,7 +330,7 @@ consteval bool check_scalar_style(std::meta::info info)
 template <Config config, scalar T>
 bool RenderScalarN(const char* name, T* val, std::size_t count)
 {
-    static_assert(check_scalar_style(config.self), "too many visual styles given for scalar type");
+    static_assert(CheckScalarStyle(config.self), "too many visual styles given for scalar type");
 
     if constexpr (constexpr auto style = fetch_annotation<Slider>(config.self)) {
         const auto min = static_cast<T>(style->min);
@@ -360,6 +349,22 @@ bool RenderScalarN(const char* name, T* val, std::size_t count)
     }
 }
 
+template <Config config, scalar T>
+bool RenderScalarN(const char* name, const T* val, std::size_t count)
+{
+    ImGui::BeginGroup();
+    ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
+    for (std::size_t i = 0; i != count; ++i) {
+        ImGuiID id{i};
+        Renderer<config, T>::Render("", val[i]);
+        ImGui::PopItemWidth();
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+    }
+    ImGui::Text("%s", name);
+    ImGui::EndGroup();
+    return false;
+}
+
 // A helper function that renders a const variable by making a mutable
 // copy and calling the mutable overload for Render.
 template <Config config, typename T>
@@ -372,21 +377,7 @@ bool DelegateToNonConst(const char* name, const T& value)
     return false;
 }
 
-template <Config config, scalar T>
-bool RenderScalarN(const char* name, const T* val, std::size_t count)
-{
-    ImGui::BeginGroup();
-    ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
-    for (std::size_t i = 0; i != count; ++i) {
-        ImGuiID id{i};
-        Render<config>("", val[i]);
-        ImGui::PopItemWidth();
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    }
-    ImGui::Text("%s", name);
-    ImGui::EndGroup();
-    return false;
-}
+// Renderer Implementations
 
 template <Config config, typename T>
 struct Renderer<config, std::span<T>>
@@ -686,68 +677,50 @@ struct Renderer<config, std::variant<Ts...>>
 };
 
 template <Config config, typename T, typename Deleter>
-bool Render(const char* name, std::unique_ptr<T, Deleter>& value)
+struct Renderer<config, std::unique_ptr<T, Deleter>>
 {
-    if (value) {
-        return Render<config>(name, *value);
-    } else {
-        ImGui::Text("%s: <nullopt>", name);
-        return false;
+    static bool Render(const char* name, std::unique_ptr<T, Deleter>& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value.get());
     }
-}
 
-template <Config config, typename T, typename Deleter>
-bool Render(const char* name, const std::unique_ptr<T, Deleter>& value)
-{
-    if (value) {
-        return Render<config>(name, *value);
-    } else {
-        ImGui::Text("%s: <nullopt>", name);
-        return false;
+    static bool Render(const char* name, const std::unique_ptr<T, Deleter>& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value.get());
     }
-}
+};
 
 template <Config config, typename T>
-bool Render(const char* name, std::shared_ptr<T>& value)
+struct Renderer<config, std::shared_ptr<T>>
 {
-    if (value) {
-        return Render<config>(name, *value);
-    } else {
-        ImGui::Text("%s: <nullopt>", name);
-        return false;
+    static bool Render(const char* name, std::shared_ptr<T>& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value.get());
     }
-}
+
+    static bool Render(const char* name, const std::shared_ptr<T>& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value.get());
+    }
+};
 
 template <Config config, typename T>
-bool Render(const char* name, const std::shared_ptr<T>& value)
+struct Renderer<config, std::weak_ptr<T>>
 {
-    if (value) {
-        return Render<config>(name, *value);
-    } else {
-        ImGui::Text("%s: <nullopt>", name);
-        return false;
+    static bool Render(const char* name, std::weak_ptr<T>& value)
+    {
+        if (value.expired()) {
+            ImGui::Text("%s: <expired>", name);
+            return false;
+        }
+        return Renderer<config, std::shared_ptr<T>>::Render(name, value.lock());
     }
-}
 
-template <Config config, typename T>
-bool Render(const char* name, std::weak_ptr<T>& value)
-{
-    if (value.expired()) {
-        ImGui::Text("%s: <expired>", name);
-        return false;
+    static bool Render(const char* name, const std::weak_ptr<T>& value)
+    {
+        return DelegateToNonConst<config>(name, value);
     }
-    return Render<config>(name, value.lock());
-}
-
-template <Config config, typename T>
-bool Render(const char* name, const std::weak_ptr<T>& value)
-{
-    if (value.expired()) {
-        ImGui::Text("%s: <expired>", name);
-        return false;
-    }
-    return Render<config>(name, value.lock());
-}
+};
 
 template <Config config, aggregate T>
 struct Renderer<config, T>
