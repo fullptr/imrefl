@@ -34,6 +34,8 @@ struct player
 {
     int         health       = 100;
 
+    const char c = 'x';
+    long double f = 100.0;
     weapon current_weapon = weapon::sword;
 
 };

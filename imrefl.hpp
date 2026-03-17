@@ -205,14 +205,6 @@ bool Render(const char* name, T& val);
 template <Config config, scalar T>
 bool Render(const char* name, const T& val);
 
-// Don't need const versions of these since the const scalar
-// overload will delegate to them instead.
-template <Config config>
-bool Render(const char* name, char& c);
-
-template <Config config>
-bool Render(const char* name, long double& x);
-
 template <Config config>
 bool Render(const char* name, bool& value);
 
@@ -423,7 +415,7 @@ bool DelegateToNonConst(const char* name, const T& value)
 {
     T mutable_value = value;
     ImGui::BeginDisabled();
-    Render<config>(name, mutable_value);
+    Renderer<config, T>::Render(name, mutable_value);
     ImGui::EndDisabled();
     return false;
 }
@@ -441,31 +433,6 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     }
     ImGui::Text("%s", name);
     ImGui::EndGroup();
-    return false;
-}
-
-// Treat char as a single character string, rather than an integral
-template <Config config>
-bool Render(const char* name, char& c)
-{
-    char buffer[2] = {c, '\0'};
-    if (ImGui::InputText(name, buffer, sizeof(buffer))) {
-        c = buffer[0];
-        return true;
-    }
-    return false;
-}
-
-// ImGui does not support long double out of the box, but double
-// precision is almost certainly fine for UI debugging
-template <Config config>
-bool Render(const char* name, long double& x)
-{
-    double temp = static_cast<double>(x);
-    if (Render<config>(name, temp)) {
-        x = temp;
-        return true;
-    }
     return false;
 }
 
@@ -852,7 +819,7 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:type_of(member):];
+                    using element_type = [:remove_const(type_of(member)):];
                     if constexpr (has_annotation<Readonly>(member)) {
                         Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
                     } else {
@@ -880,7 +847,7 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:type_of(member):];
+                    using element_type = [:remove_const(type_of(member)):];
                     Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
                 }
             }
@@ -895,14 +862,36 @@ struct Renderer<config, T>
 template <Config config, scalar T>
 struct Renderer<config, T>
 {
-    static bool Render(const char* name, T& val)
+    static bool Render(const char* name, T& value)
     {
-        return RenderScalarN<config>(name, &val, 1);
+        // Treat char as a single character string, rather than an integral
+        if constexpr (^^T == ^^char) {
+            char buffer[2] = {value, '\0'};
+            if (ImGui::InputText(name, buffer, sizeof(buffer))) {
+                value = buffer[0];
+                return true;
+            }
+            return false;
+        }
+
+        // Treat long double as a simple double as ImGui does not support it natively
+        else if constexpr (^^T == ^^long double) {
+            double temp = static_cast<double>(value);
+            if (Renderer<config, double>::Render(name, temp)) {
+                value = temp;
+                return true;
+            }
+            return false;
+        }
+
+        else {
+            return RenderScalarN<config, T>(name, &value, 1);
+        }
     }
 
-    static bool Render(const char* name, const T& val)
+    static bool Render(const char* name, const T& value)
     {
-        return DelegateToNonConst<config>(name, val);
+        return DelegateToNonConst<config>(name, value);
     }
 };
 
