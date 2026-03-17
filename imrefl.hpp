@@ -27,7 +27,7 @@ struct Renderable
 
 template <Config config, typename T>
 concept renderable = requires(const char* name, T& val) {
-    { ImRefl::Renderable<config, T>::render(name, val) }
+    { ImRefl::Renderable<config, T>::Render(name, val) }
         -> std::convertible_to<bool>;
 };
 
@@ -76,7 +76,8 @@ inline static constexpr String string {};
 struct Radio {};
 inline static constexpr Radio radio {};
 
-namespace detail {
+template <typename T>
+concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
 
 struct ImGuiID
 {
@@ -94,9 +95,6 @@ template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; }
 
 template <typename T>
 concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
-
-template <typename T>
-concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
 
 template <typename T>
 concept aggregate = std::meta::is_aggregate_type(^^T);
@@ -192,17 +190,14 @@ consteval auto num_type()
 
 // Forward decls
 
+template <Config config, scoped_enum T>
+struct Renderable<config, T>;
+
 template <Config config, typename T>
 bool Render(const char* name, T& val);
 
 template <Config config, typename T>
 bool Render(const char* name, const T& val);
-
-template <Config config, scoped_enum T>
-bool Render(const char* name, T& value);
-
-template <Config config, scoped_enum T>
-bool Render(const char* name, const T& value);
 
 template <Config config, scalar T>
 bool Render(const char* name, T& val);
@@ -337,7 +332,7 @@ bool RenderForwardRange(const char* name, R& range)
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
             using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
-            if constexpr (!std::is_const_v<element_type> && std::ranges::random_access_range<R>) {
+            if constexpr (!is_const_type(^^element_type) && std::ranges::random_access_range<R>) {
                 changed = Render<config>("", element) || changed;
                 ImGui::SameLine();
                 ImGui::Selectable(index_name.c_str());
@@ -453,43 +448,6 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     ImGui::Text("%s", name);
     ImGui::EndGroup();
     return false;
-}
-
-template <Config config, scoped_enum T>
-bool Render(const char* name, T& value)
-{
-    ImGuiID guard{name};
-    bool changed = false;
-    if constexpr (has_annotation<Radio>(config.self)) {
-        ImGui::Text("%s", name);
-        template for (constexpr auto e : enums_of<T>()) {
-            constexpr auto enum_name = std::meta::identifier_of(e);
-            ImGui::SameLine();
-            if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
-                value = [:e:];
-                changed = true;
-            }
-        }
-    } else {
-        const auto value_name = enum_to_string(value);
-        if (ImGui::BeginCombo(name, value_name)) {
-            template for (constexpr auto e : enums_of<T>()) {
-                constexpr auto enum_name = std::meta::identifier_of(e);
-                if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
-                    value = [:e:];
-                    changed = true;
-                }
-            }
-            ImGui::EndCombo();
-        }
-    }
-    return changed;
-}
-
-template <Config config, scoped_enum T>
-bool Render(const char* name, const T& value)
-{
-    return DelegateToNonConst<config>(name, value);
 }
 
 template <Config config, scalar T>
@@ -949,31 +907,54 @@ bool Render(const char* name, const T& x)
 }
 
 template <Config config, typename T>
-bool Render(const char* name, T& val)
+bool Render(const char* name, T& value)
 {
-    static_assert(false && "not implemented for this type"); 
+    if constexpr (renderable<config, T>) {
+        return Renderable<config, T>::Render(name, value);
+    } else {
+        static_assert(false && "not implemented for this type"); 
+    }
 }
 
-}  // namespace detail
+template <Config config, scoped_enum T>
+struct Renderable<config, T>
+{
+    static bool Render(const char* name, T& value)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
+        if constexpr (has_annotation<Radio>(config.self)) {
+            ImGui::Text("%s", name);
+            template for (constexpr auto e : enums_of<T>()) {
+                constexpr auto enum_name = std::meta::identifier_of(e);
+                ImGui::SameLine();
+                if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
+                    value = [:e:];
+                    changed = true;
+                }
+            }
+        } else {
+            const auto value_name = enum_to_string(value);
+            if (ImGui::BeginCombo(name, value_name)) {
+                template for (constexpr auto e : enums_of<T>()) {
+                    constexpr auto enum_name = std::meta::identifier_of(e);
+                    if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
+                        value = [:e:];
+                        changed = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+        return changed;
+    }
+};
 
 template <typename T>
 bool Input(const char* name, T& value)
 {
-    
     constexpr auto config = Config{ .self=^^value };
-    if constexpr (renderable<config, T>) {
-        return Renderable<config, T>::render(name, value);
-    } else {
-        return detail::Render<config>(name, value);
-    }
-}
-
-template <typename T>
-bool Input(const char* name, const T& value)
-{
-    
-    constexpr auto config = Config{ .self=^^value };
-    return detail::Render<config>(name, value);
+    return Render<config>(name, value);
 }
 
 }  // namespace ImRefl

@@ -84,7 +84,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    const player p = {};
+    player p = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
