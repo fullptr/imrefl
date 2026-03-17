@@ -38,7 +38,12 @@ struct player
     long double f = 100.0;
     weapon current_weapon = weapon::sword;
     bool enabled = false;
-    int values[3] = {1, 2, 3};
+    std::array<int, 3> values = {1, 2, 3};
+    std::vector<int> data = {1, 2, 3, 4, 5};
+    std::string name = "Link";
+
+    [[=ImRefl::color]]
+    const glm::vec3 pos = {0, 0, 1};
 };
 
 int main()

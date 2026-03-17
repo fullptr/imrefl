@@ -200,44 +200,6 @@ consteval auto num_type()
 
 // Forward decls
 
-template <Config config, scalar T>
-bool Render(const char* name, T& val);
-
-template <Config config, scalar T>
-bool Render(const char* name, const T& val);
-
-template <Config config, typename T, std::size_t N> requires (N > 0)
-bool Render(const char* name, T (&arr)[N]);
-
-template <Config config, typename T, std::size_t N> requires (N > 0)
-bool Render(const char* name, const T (&arr)[N]);
-
-template <Config config, typename T, std::size_t N> requires (N > 0)
-bool Render(const char* name, std::array<T, N>& arr);
-
-template <Config config, typename T, std::size_t N> requires (N > 0)
-bool Render(const char* name, const std::array<T, N>& arr);
-
-template <Config config, std::ranges::forward_range R>
-bool Render(const char* name, R& range);
-
-template <Config config, std::ranges::forward_range R>
-bool Render(const char* name, const R& range);
-
-template <Config config>
-bool Render(const char* name, std::string& value);
-
-template <Config config>
-bool Render(const char* name, const std::string& value);
-
-#ifdef IMREFL_GLM
-template <Config config, int Size, scalar T, glm::qualifier Qual>
-bool Render(const char* name, glm::vec<Size, T, Qual>& value);
-
-template <Config config, int Size, scalar T, glm::qualifier Qual>
-bool Render(const char* name, const glm::vec<Size, T, Qual>& value);
-#endif
-
 template <Config config, typename L, typename R>
 bool Render(const char* name, std::pair<L, R>& value);
 
@@ -490,7 +452,7 @@ struct Renderer<config, std::span<const T>>
                 float copy[4] = {};
                 std::copy(arr.begin(), arr.end(), std::begin(copy));
                 ImGui::BeginDisabled();
-                Render<config>(name, std::span{copy, arr.size()});
+                Renderer<config, std::span<T>>::Render(name, std::span{copy, arr.size()});
                 ImGui::EndDisabled();
                 return false;
             }
@@ -505,88 +467,93 @@ struct Renderer<config, std::span<const T>>
     }
 };
 
-template <Config config, typename T, std::size_t N>
-    requires (N > 0) 
+template <Config config, typename T, std::size_t N> requires (N > 0) 
 struct Renderer<config, T[N]>
 {
     using Type = T[N];
     static bool Render(const char* name, Type& arr)
     {
-        return Renderer<config, std::span<T>>::Render(name, std::span<T>{arr, N});
+        return Renderer<config, std::span<T>>::Render(name, arr);
     }
 
     static bool Render(const char* name, const Type& arr)
     {
-        return Renderer<config, std::span<T>>::Render(name, std::span<const T>{arr, N});
+        return Renderer<config, std::span<T>>::Render(name, arr);
     }
 };
 
-template <Config config, typename T, std::size_t N>
-    requires (N > 0)
-bool Render(const char* name, std::array<T, N>& arr)
+template <Config config, typename T, std::size_t N> requires (N > 0) 
+struct Renderer<config, std::array<T, N>>
 {
-    return Render<config>(name, std::span<T>{arr});
-}
+    static bool Render(const char* name, std::array<T, N>& arr)
+    {
+        return Renderer<config, std::span<T>>::Render(name, arr);
+    }
 
-template <Config config, typename T, std::size_t N>
-    requires (N > 0)
-bool Render(const char* name, const std::array<T, N>& arr)
-{
-    return Render<config>(name, std::span<const T>{arr});
-}
-
-template <Config config, std::ranges::forward_range R>
-bool Render(const char* name, R& range)
-{
-    return RenderForwardRange<config>(name, range);
-}
+    static bool Render(const char* name, const std::array<T, N>& arr)
+    {
+        return Renderer<config, std::span<const T>>::Render(name, arr);
+    }
+};
 
 template <Config config, std::ranges::forward_range R>
-bool Render(const char* name, const R& range)
+struct Renderer<config, R>
 {
-    return RenderForwardRange<config>(name, range);
-}
+    static bool Render(const char* name, R& range)
+    {
+        return RenderForwardRange<config>(name, range);
+    }
+
+    static bool Render(const char* name, const R& range)
+    {
+        return RenderForwardRange<config>(name, range);
+    }
+};
 
 template <Config config>
-bool Render(const char* name, std::string& value)
+struct Renderer<config, std::string>
 {
-    auto callback = [](ImGuiInputTextCallbackData* data) -> int {
-        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
-            auto* str = static_cast<std::string*>(data->UserData);
-            str->resize(data->BufTextLen);
-            data->Buf = str->data();
-        }
-        return 0;
-    };
-    return ImGui::InputText(
-        name,
-        value.data(),
-        value.size() + 1,
-        ImGuiInputTextFlags_CallbackResize,
-        callback,
-        static_cast<void*>(&value)
-    );
-}
+    static bool Render(const char* name, std::string& value)
+    {
+        auto callback = [](ImGuiInputTextCallbackData* data) -> int {
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+                auto* str = static_cast<std::string*>(data->UserData);
+                str->resize(data->BufTextLen);
+                data->Buf = str->data();
+            }
+            return 0;
+        };
+        return ImGui::InputText(
+            name,
+            value.data(),
+            value.size() + 1,
+            ImGuiInputTextFlags_CallbackResize,
+            callback,
+            static_cast<void*>(&value)
+        );
+    }
 
-template <Config config>
-bool Render(const char* name, const std::string& value)
-{
-    ImGui::Text("%s: %s", name, value.c_str());
-    return false;
-}
+    static bool Render(const char* name, const std::string& value)
+    {
+        ImGui::Text("%s: %s", name, value.c_str());
+        return false;
+    }
+};
 
 #ifdef IMREFL_GLM
 template <Config config, int Size, scalar T, glm::qualifier Qual>
-bool Render(const char* name, glm::vec<Size, T, Qual>& value)
+struct Renderer<config, glm::vec<Size, T, Qual>>
 {
-    return Render<config>(name, std::span{&value[0], Size});
-}
+    static bool Render(const char* name, glm::vec<Size, T, Qual>& value)
+    {
+        return Renderer<config, std::span<T>>::Render(name, std::span{&value[0], Size});
+    }
 
-template <Config config, int Size, scalar T, glm::qualifier Qual>
-bool Render(const char* name, const glm::vec<Size, T, Qual>& value)
-{
-    return Render<config>(name, std::span{&value[0], Size});
-}
+    static bool Render(const char* name, const glm::vec<Size, T, Qual>& value)
+    {
+        return Renderer<config, std::span<const T>>::Render(name, std::span{&value[0], Size});
+    }
+};
 #endif
 
 template <Config config, typename L, typename R>
