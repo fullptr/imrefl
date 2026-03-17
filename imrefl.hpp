@@ -325,7 +325,8 @@ bool RenderForwardRange(const char* name, R& range)
         for (auto& element : range) {
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
-            if constexpr (std::ranges::random_access_range<R>) {
+            using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
+            if constexpr (!std::is_const_v<element_type> && std::ranges::random_access_range<R>) {
                 changed = Render<config>("", element) || changed;
                 ImGui::SameLine();
                 ImGui::Selectable(index_name.c_str());
@@ -590,7 +591,7 @@ bool Render(const char* name, std::span<const T> arr)
 
     // scalar spans can be rendered in a single line if specified.
     if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
-        return RenderScalarNi<config>(name, arr.data(), arr.size());
+        return RenderScalarN<config>(name, arr.data(), arr.size());
     }
 
     return RenderForwardRange<config>(name, arr);
