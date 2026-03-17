@@ -15,6 +15,22 @@
 
 namespace ImRefl {
 
+struct Config
+{
+    std::meta::info self = {};
+};
+
+template <Config config, typename T>
+struct Renderable
+{
+};
+
+template <Config config, typename T>
+concept renderable = requires(const char* name, T& val) {
+    { ImRefl::Renderable<config, T>::render(name, val) }
+        -> std::convertible_to<bool>;
+};
+
 struct Ignore {};
 inline static constexpr Ignore ignore {};
 
@@ -71,11 +87,6 @@ struct ImGuiID
     ImGuiID(ImGuiID&&) = delete;
     ImGuiID& operator=(ImGuiID&&) = delete;
     ~ImGuiID() { ImGui::PopID(); }
-};
-
-struct Config
-{
-    std::meta::info self = {};
 };
 
 // Magic spell to make writing a variant visitor nicer.
@@ -945,11 +956,16 @@ bool Render(const char* name, T& val)
 
 }  // namespace detail
 
-bool Input(const char* name, auto& value)
+template <typename T>
+bool Input(const char* name, T& value)
 {
-    constexpr auto config = detail::Config{ .self=^^value };
-
-    return detail::Render<config>(name, value);
+    
+    constexpr auto config = Config{ .self=^^value };
+    if constexpr (renderable<config, T>) {
+        return Renderable<config, T>::render(name, value);
+    } else {
+        return detail::Render<config>(name, value);
+    }
 }
 
 }  // namespace ImRefl
