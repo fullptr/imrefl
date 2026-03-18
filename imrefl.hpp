@@ -29,7 +29,7 @@ struct Config
     consteval auto fetch_hint() const -> std::optional<T>
     {
         for (const auto hint : GetHints()) {
-            if (std::meta::remove_cvref(std::meta::type_of(hint)) == std::meta::remove_cvref(^^T)) {
+            if (remove_cvref(type_of(hint)) == remove_cvref(^^T)) {
                 return std::meta::extract<T>(hint);
             }
         }
