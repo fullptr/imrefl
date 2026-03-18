@@ -30,19 +30,19 @@ enum class weapon
     axe
 };
 
-class my_type
+class custom_type
 {
     int data = 5;
 public:
-    my_type() = default;
+    custom_type(int d) : data{d} {}
     int get() const { return data; }
     void set(int x) { data = x; }
 };
 
 template <ImRefl::Config config>
-struct ImRefl::Renderer<config, my_type>
+struct ImRefl::Renderer<config, custom_type>
 {
-    static bool Render(const char* name, my_type& value)
+    static bool Render(const char* name, custom_type& value)
     {
         int inner = value.get();
         if (Renderer<config, int>::Render(name, inner)) {
@@ -51,7 +51,7 @@ struct ImRefl::Renderer<config, my_type>
         }
         return false;
     }
-    static bool Render(const char* name, const my_type& value)
+    static bool Render(const char* name, const custom_type& value)
     {
         return ImRefl::DelegateToNonConst<config>(name, value);
     }
@@ -59,27 +59,28 @@ struct ImRefl::Renderer<config, my_type>
 
 struct player
 {
+    std::string name         = "Link";
+    bool        invulnerable = false;
     int         health       = 100;
 
-    const char c = 'x';
-    long double f = 100.0;
-    weapon current_weapon = weapon::sword;
-    bool enabled = false;
-    std::array<int, 3> values = {1, 2, 3};
-    std::vector<int> data = {1, 2, 3, 4, 5};
-    std::string name = "Link";
+    [[=ImRefl::string]]
+    char buffer[64] = {};
 
-    [[=ImRefl::color]]
-    glm::vec3 pos = {0, 0, 1};
+    [[=ImRefl::slider(1, 50)]]
+    int level = 14;
 
-    std::pair<glm::vec3, weapon> pair = {};
-
-    std::optional<int> opt = {};
-
-    std::shared_ptr<int> ptr = std::make_shared<int>(5);
+    [[=ImRefl::ignore]]
+    double secret_information = 3.14159;
 
     [[=ImRefl::readonly]]
-    my_type t = {};
+    float attack_modifier = 3.5f;
+
+    weapon current_weapon = weapon::sword;
+
+    [[=ImRefl::color]]
+    glm::vec3 color = {1, 1, 0};
+
+    custom_type value = {5};
 };
 
 int main()
