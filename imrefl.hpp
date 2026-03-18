@@ -712,6 +712,22 @@ struct Renderer<config, std::weak_ptr<T>>
     }
 };
 
+template <Config config, typename T>
+struct Renderer<config, T*>
+{
+    using Ptr = T*;
+
+    static bool Render(const char* name, Ptr& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value);
+    }
+
+    static bool Render(const char* name, const Ptr& value)
+    {
+        return RenderPointerAsValue<config, T>(name, value);
+    }
+};
+
 template <Config config, aggregate T>
 struct Renderer<config, T>
 {
