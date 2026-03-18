@@ -81,6 +81,8 @@ struct player
     glm::vec3 color = {1, 1, 0};
 
     const custom_type value = {5};
+
+    std::vector<int> data = {1, 2, 3, 4, 5};
 };
 
 int main()

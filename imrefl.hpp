@@ -223,6 +223,9 @@ inline bool TreeNodeExNoDisable(const char* label)
 template <Config config, std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, R& range)
 {
+    constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
+    using element_type = std::ranges::range_value_t<R>; 
+
     ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name)) {
@@ -243,10 +246,9 @@ bool RenderForwardRange(const char* name, R& range)
         for (auto& element : range) {
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
-            using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
-            using element_type_nocvref = std::remove_const_t<element_type>;
-            if constexpr (!is_const_type(^^element_type) && std::ranges::random_access_range<R>) {
-                changed = Renderer<config, element_type_nocvref>::Render("", element) || changed;
+
+            if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
+                changed = Renderer<config, element_type>::Render("", element) || changed;
                 ImGui::SameLine();
                 ImGui::Selectable(index_name.c_str());
                 if (ImGui::BeginDragDropSource()) {
@@ -264,7 +266,7 @@ bool RenderForwardRange(const char* name, R& range)
                 }
             }
             else {
-                changed = Renderer<config, element_type_nocvref>::Render(index_name.c_str(), element) || changed;
+                changed = Renderer<config, element_type>::Render(index_name.c_str(), element) || changed;
             }
             ++i;
         }
@@ -292,14 +294,13 @@ bool RenderForwardRange(const char* name, R& range)
 template <Config config, std::ranges::forward_range R>
 bool RenderForwardRange(const char* name, const R& range)
 {
-    using element_type = std::remove_reference_t<std::ranges::range_reference_t<R>>;
-    using element_type_nocvref = std::remove_const_t<element_type>;
+    using element_type = std::ranges::range_value_t<R>; 
 
     ImGuiID id{name};
     if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
-            Renderer<config, element_type_nocvref>::Render(std::format("[{}]", i).c_str(), element); 
+            Renderer<config, element_type>::Render(std::format("[{}]", i).c_str(), element); 
             ++i;
         }
         ImGui::TreePop();
@@ -860,7 +861,7 @@ struct Renderer<config, T>
 template <typename T>
 bool Input(const char* name, T&& value)
 {
-    using Type = std::remove_cvref_t<T>;
+    using Type = [:remove_cvref(^^T):];
     constexpr auto config = Config{ .self=^^value };
     if constexpr (renderable<config, Type>) {
         return Renderer<config, Type>::Render(name, std::forward<T>(value));
