@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #endif
 
-#include <print>
 #include <concepts>
 #include <format>
 #include <memory>
