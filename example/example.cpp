@@ -30,33 +30,6 @@ enum class weapon
     axe
 };
 
-class custom_type
-{
-    int data;
-public:
-    custom_type(int d) : data{d} {}
-    int get() const { return data; }
-    void set(int x) { data = x; }
-};
-
-template <ImRefl::Config config>
-struct ImRefl::Renderer<config, custom_type>
-{
-    static bool Render(const char* name, custom_type& value)
-    {
-        int inner = value.get();
-        if (Renderer<config, int>::Render(name, inner)) {
-            value.set(inner);
-            return true;
-        }
-        return false;
-    }
-    static bool Render(const char* name, const custom_type& value)
-    {
-        return ImRefl::DelegateToNonConst<config>(name, value);
-    }
-};
-
 struct player
 {
     std::string name         = "Link";
@@ -66,7 +39,6 @@ struct player
     [[=ImRefl::string]]
     char buffer[64] = {};
 
-    [[=ImRefl::slider(1, 50)]]
     int level = 14;
 
     [[=ImRefl::ignore]]
@@ -80,9 +52,17 @@ struct player
     [[=ImRefl::color]]
     glm::vec3 color = {1, 1, 0};
 
-    const custom_type value = {5};
-
     std::vector<int> data = {1, 2, 3, 4, 5};
+};
+
+template <>
+struct ImRefl::TypeSettings<player>
+{
+    static consteval std::vector<std::meta::info> GetAnnotations(std::string_view name)
+    {
+        if (name == "level") return { std::meta::reflect_constant(ImRefl::slider(1, 50)) };
+        return {};
+    }
 };
 
 int main()

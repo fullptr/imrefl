@@ -18,6 +18,9 @@ namespace ImRefl {
 struct Config
 {
     std::meta::info self = {};
+
+    const std::meta::info* annotations     = nullptr;
+    std::size_t            num_annotations = 0;
 };
 
 template <Config config, typename T>
@@ -29,6 +32,23 @@ concept renderable = requires(const char* name, T&& val)
     { ImRefl::Renderer<config, T>::Render(name, std::forward<T>(val)) }
         -> std::convertible_to<bool>;
 };
+
+template <typename T>
+struct TypeSettings;
+
+template <std::meta::info member, typename parent>
+consteval std::vector<std::meta::info> get_annotations()
+{
+    std::vector<std::meta::info> annos;
+    for (const auto a : annotations_of(member)) {
+        annos.push_back(a);
+    }
+
+    for (const auto a : TypeSettings<parent>::GetAnnotations(identifier_of(member))) {
+        annos.push_back(a);
+    }
+    return annos;
+}
 
 struct Ignore {};
 inline static constexpr Ignore ignore {};
@@ -137,9 +157,10 @@ constexpr const char* enum_to_string(T value)
 }
 
 template <typename T>
-consteval std::optional<T> fetch_annotation(std::meta::info info)
+consteval std::optional<T> fetch_annotation(Config config)
 {
-    for (const auto a : std::meta::annotations_of(info)) {
+    const auto annos = std::span<const std::meta::info>{config.annotations, config.num_annotations};
+    for (const auto a : annos) {
         if (std::meta::remove_cvref(std::meta::type_of(a)) == std::meta::remove_cvref(^^T)) {
             return std::meta::extract<T>(a);
         }
@@ -148,9 +169,9 @@ consteval std::optional<T> fetch_annotation(std::meta::info info)
 }
 
 template <typename T>
-consteval bool has_annotation(std::meta::info info)
+consteval bool has_annotation(Config config)
 {
-    return fetch_annotation<T>(info).has_value();
+    return fetch_annotation<T>(config).has_value();
 }
 
 template <std::signed_integral T>
@@ -229,7 +250,7 @@ bool RenderForwardRange(const char* name, R& range)
     ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name)) {
-        if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_front<R>) {
+        if constexpr (!has_annotation<NonResizable>(config) && can_push_pop_front<R>) {
             ImGuiID id{"front"};
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
@@ -271,7 +292,7 @@ bool RenderForwardRange(const char* name, R& range)
             ++i;
         }
 
-        if constexpr (!has_annotation<NonResizable>(config.self) && can_push_pop_back<R>) {
+        if constexpr (!has_annotation<NonResizable>(config) && can_push_pop_back<R>) {
             if (!can_push_pop_front<R> || i > 0) {
                 ImGuiID id{"back"};
                 const float button_size = ImGui::GetFrameHeight();
@@ -308,26 +329,26 @@ bool RenderForwardRange(const char* name, const R& range)
     return false; 
 }
 
-consteval bool CheckScalarStyle(std::meta::info info)
+consteval bool CheckScalarStyle(Config config)
 {
     std::size_t count = 0;
-    if (has_annotation<Normal>(info)) { ++count; }
-    if (has_annotation<Slider>(info)) { ++count; }
-    if (has_annotation<Drag>(info))   { ++count; }
+    if (has_annotation<Normal>(config)) { ++count; }
+    if (has_annotation<Slider>(config)) { ++count; }
+    if (has_annotation<Drag>(config))   { ++count; }
     return count < 2;
 }
 
 template <Config config, scalar T>
 bool RenderScalarN(const char* name, T* val, std::size_t count)
 {
-    static_assert(CheckScalarStyle(config.self), "too many visual styles given for scalar type");
+    static_assert(CheckScalarStyle(config), "too many visual styles given for scalar type");
 
-    if constexpr (constexpr auto style = fetch_annotation<Slider>(config.self)) {
+    if constexpr (constexpr auto style = fetch_annotation<Slider>(config)) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
         return ImGui::SliderScalarN(name, num_type<T>(), val, count, &min, &max);
     }
-    else if constexpr (constexpr auto style = fetch_annotation<Drag>(config.self)) {
+    else if constexpr (constexpr auto style = fetch_annotation<Drag>(config)) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
         const auto speed = style->speed;
@@ -375,7 +396,7 @@ struct Renderer<config, std::span<T>>
     static bool Render(const char* name, std::span<T> arr)
     {
         // Chars arrays to be treated as string buffers.
-        if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
+        if constexpr ((^^T == ^^char) && has_annotation<String>(config)) {
             return ImGui::InputText(name, arr.data(), arr.size());
         }
         
@@ -383,16 +404,16 @@ struct Renderer<config, std::span<T>>
         if constexpr (^^T == ^^float) {
             switch (arr.size()) {
                 case 3: {
-                    if constexpr (has_annotation<ColorWheel>(config.self)) {
+                    if constexpr (has_annotation<ColorWheel>(config)) {
                         return ImGui::ColorPicker3(name, arr.data());
-                    } else if constexpr (has_annotation<Color>(config.self)) {
+                    } else if constexpr (has_annotation<Color>(config)) {
                         return ImGui::ColorEdit3(name, arr.data());
                     }
                 } break;
                 case 4: {
-                    if constexpr (has_annotation<ColorWheel>(config.self)) {
+                    if constexpr (has_annotation<ColorWheel>(config)) {
                         return ImGui::ColorPicker4(name, arr.data());
-                    } else if constexpr (has_annotation<Color>(config.self)) {
+                    } else if constexpr (has_annotation<Color>(config)) {
                         return ImGui::ColorEdit4(name, arr.data());
                     }
                 } break;
@@ -400,7 +421,7 @@ struct Renderer<config, std::span<T>>
         }
 
         // scalar spans can be rendered in a single line if specified.
-        if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
+        if constexpr (scalar<T> && has_annotation<InLine>(config)) {
             return RenderScalarN<config>(name, arr.data(), arr.size());
         }
 
@@ -414,7 +435,7 @@ struct Renderer<config, std::span<const T>>
     static bool Render(const char* name, std::span<const T> arr)
     {
         // Chars arrays to be treated as string buffers.
-        if constexpr ((^^T == ^^char) && has_annotation<String>(config.self)) {
+        if constexpr ((^^T == ^^char) && has_annotation<String>(config)) {
             ImGui::Text("%s: ", name);
             ImGui::SameLine();
             ImGui::TextUnformatted(arr.data(), arr.data() + arr.size());
@@ -434,7 +455,7 @@ struct Renderer<config, std::span<const T>>
         }
 
         // scalar spans can be rendered in a single line if specified.
-        if constexpr (scalar<T> && has_annotation<InLine>(config.self)) {
+        if constexpr (scalar<T> && has_annotation<InLine>(config)) {
             return RenderScalarN<config>(name, arr.data(), arr.size());
         }
 
@@ -738,15 +759,17 @@ struct Renderer<config, T>
 
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
-                if constexpr (!has_annotation<Ignore>(member)) {
-                    constexpr auto new_config = Config{ .self=member };
+                constexpr auto annos = std::define_static_array(get_annotations<member, T>());
+                constexpr auto new_config = Config{ .self=member, .annotations=annos.data(), .num_annotations=annos.size() };
 
-                    if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
+                if constexpr (!has_annotation<Ignore>(new_config)) {
+
+                    if constexpr (constexpr auto separator = fetch_annotation<Separator>(new_config)) {
                         ImGui::SeparatorText(separator->title);
                     }
 
                     using element_type = [:remove_const(type_of(member)):];
-                    if constexpr (has_annotation<Readonly>(member)) {
+                    if constexpr (has_annotation<Readonly>(new_config)) {
                         Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
                     } else {
                         changed = Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
@@ -766,8 +789,10 @@ struct Renderer<config, T>
 
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
-                if constexpr (!has_annotation<Ignore>(member)) {
-                    constexpr auto new_config = Config{ .self=member };
+                constexpr auto annos = std::define_static_array(get_annotations<member, T>());
+                constexpr auto new_config = Config{ .self=member, .annotations=annos.data(), .num_annotations=annos.size() };
+
+                if constexpr (!has_annotation<Ignore>(new_config)) {
 
                     if constexpr (constexpr auto separator = fetch_annotation<Separator>(member)) {
                         ImGui::SeparatorText(separator->title);
@@ -842,7 +867,7 @@ struct Renderer<config, T>
     {
         ImGuiID guard{name};
         bool changed = false;
-        if constexpr (has_annotation<Radio>(config.self)) {
+        if constexpr (has_annotation<Radio>(config)) {
             ImGui::Text("%s", name);
             template for (constexpr auto e : enums_of<T>()) {
                 constexpr auto enum_name = std::meta::identifier_of(e);
