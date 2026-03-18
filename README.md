@@ -96,6 +96,7 @@ struct ImRefl::Renderer<config, custom_type>
 There are a few key things to point out:
 
 * Implementations of `Renderer` take a `ImRefl::Config` non-type template parameter. This is the mechanism for passing annotation data around; if a struct contains a data member of this type and it is annotated, then these annotations are accessible through the config. This means that third-party types can make use of the given `ImRefl` annotations as well as allowing users to define their own.
+* These functions should return `bool`, indicating if the given value has changed. The non-`const` version thus should always return false.
 * You can delegate to other `Renderer` implementations.
 * Implementing two version of the `Render` function can be tedious, and if your type is small and cheap to copy, you may want to implement the `const` version by simply taking a mutable copy and calling the non-`const` version. For that `ImRefl` provides the helper function `DelegateToNonConst` to do exactly this.
 

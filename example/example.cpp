@@ -32,7 +32,7 @@ enum class weapon
 
 class custom_type
 {
-    int data = 5;
+    int data;
 public:
     custom_type(int d) : data{d} {}
     int get() const { return data; }
