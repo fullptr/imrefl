@@ -36,7 +36,7 @@ struct player
 };
 
 template <>
-struct ImRefl::TypeSettings<player>
+struct ImRefl::RenderHints<player>
 {
     static consteval std::vector<std::meta::info> GetHints(std::string_view name)
     {
