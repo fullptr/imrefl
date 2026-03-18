@@ -27,10 +27,16 @@ struct Renderer
 };
 
 template <Config config, typename T>
-concept renderable = requires(const char* name, T& val) {
-    { ImRefl::Renderer<config, T>::Render(name, val) }
-        -> std::convertible_to<bool>;
-    };
+concept renderable = !is_const_type(^^T) && requires(const char* name, T& val)
+{
+    { ImRefl::Renderer<config, T>::Render(name, val) } -> std::convertible_to<bool>;
+};
+
+template <Config config, typename T>
+concept const_renderable = requires(const char* name, const T& val)
+{
+    { ImRefl::Renderer<config, T>::Render(name, val) } -> std::convertible_to<bool>;
+};
 
 struct Ignore {};
 inline static constexpr Ignore ignore {};
@@ -77,9 +83,6 @@ inline static constexpr String string {};
 struct Radio {};
 inline static constexpr Radio radio {};
 
-template <typename T>
-concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
-
 struct ImGuiID
 {
     ImGuiID(const char* id) { ImGui::PushID(id); }
@@ -96,6 +99,9 @@ template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; }
 
 template <typename T>
 concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
+
+template <typename T>
+concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
 
 template <typename T>
 concept aggregate = std::meta::is_aggregate_type(^^T);
@@ -454,7 +460,7 @@ struct Renderer<config, T[N]>
 
     static bool Render(const char* name, const Type& arr)
     {
-        return Renderer<config, std::span<T>>::Render(name, arr);
+        return Renderer<config, std::span<const T>>::Render(name, arr);
     }
 };
 
@@ -864,6 +870,17 @@ bool Input(const char* name, T& value)
 {
     constexpr auto config = Config{ .self=^^value };
     if constexpr (renderable<config, T>) {
+        return Renderer<config, T>::Render(name, value);
+    } else {
+        static_assert(false && "not implemented for this type"); 
+    }
+}
+
+template <typename T>
+bool Input(const char* name, const T& value)
+{
+    constexpr auto config = Config{ .self=^^value };
+    if constexpr (const_renderable<config, T>) {
         return Renderer<config, T>::Render(name, value);
     } else {
         static_assert(false && "not implemented for this type"); 
