@@ -38,11 +38,8 @@ struct player
 template <>
 struct ImRefl::RenderHints<player>
 {
-    static consteval std::vector<std::meta::info> GetHints(std::string_view name)
-    {
-        if (name == "level") return { std::meta::reflect_constant(ImRefl::slider(1, 50)) };
-        return {};
-    }
+    [[=ImRefl::slider(1, 50)]]
+    int level;
 };
 
 int main()

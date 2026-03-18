@@ -59,6 +59,13 @@ struct RenderHints
     static consteval std::vector<std::meta::info> GetHints() { return {}; }
 };
 
+template <typename T>
+consteval auto nsdm_of()
+{
+    const auto ctx = std::meta::access_context::current();
+	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
+}
+
 template <std::meta::info member, typename parent>
 consteval std::vector<std::meta::info> get_hints()
 {
@@ -67,8 +74,12 @@ consteval std::vector<std::meta::info> get_hints()
         render_hints.push_back(a);
     }
 
-    for (const auto a : RenderHints<parent>::GetHints(identifier_of(member))) {
-        render_hints.push_back(a);
+    for (const auto m : nsdm_of<RenderHints<parent>>()) {
+        if (identifier_of(member) == identifier_of(m)) {
+            for (const auto a : annotations_of(m)) {
+                render_hints.push_back(a);
+            }
+        }
     }
     return render_hints;
 }
@@ -159,13 +170,6 @@ template <scoped_enum T>
 consteval auto enums_of()
 {
     return std::define_static_array(std::meta::enumerators_of(^^T));
-}
-
-template <typename T>
-consteval auto nsdm_of()
-{
-    const auto ctx = std::meta::access_context::current();
-	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
 }
 
 template <scoped_enum T>
