@@ -22,9 +22,7 @@ struct Config
 };
 
 template <Config config, typename T>
-struct Renderer
-{
-};
+struct Renderer;
 
 template <Config config, typename T>
 concept renderable = !is_const_type(^^T) && requires(const char* name, T& val)
