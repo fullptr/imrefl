@@ -36,7 +36,7 @@ struct player
 };
 
 template <>
-struct ImRefl::RenderHints<player>
+struct ImRefl::ExternalAnnotations<player>
 {
     [[=ImRefl::slider(1, 50)]]
     int level;
