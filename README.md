@@ -90,8 +90,6 @@ struct ImRefl::Renderer<config, custom_type>
     }
 };
 ```
-```
-```
 
 There are a few key things to point out:
 
