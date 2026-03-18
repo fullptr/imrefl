@@ -54,7 +54,10 @@ concept renderable = requires(const char* name, T&& val)
 };
 
 template <typename T>
-struct TypeSettings;
+struct TypeSettings
+{
+    static consteval std::vector<std::meta::info> GetHints() { return {}; }
+};
 
 template <std::meta::info member, typename parent>
 consteval std::vector<std::meta::info> get_annotations()
