@@ -64,7 +64,7 @@ consteval std::vector<std::meta::info> get_annotations()
         annos.push_back(a);
     }
 
-    for (const auto a : TypeSettings<parent>::GetAnnotations(identifier_of(member))) {
+    for (const auto a : TypeSettings<parent>::GetHints(identifier_of(member))) {
         annos.push_back(a);
     }
     return annos;

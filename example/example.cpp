@@ -32,33 +32,13 @@ enum class weapon
 
 struct player
 {
-    std::string name         = "Link";
-    bool        invulnerable = false;
-    int         health       = 100;
-
-    [[=ImRefl::string]]
-    char buffer[64] = {};
-
     int level = 14;
-
-    [[=ImRefl::ignore]]
-    double secret_information = 3.14159;
-
-    [[=ImRefl::readonly]]
-    float attack_modifier = 3.5f;
-
-    weapon current_weapon = weapon::sword;
-
-    [[=ImRefl::color]]
-    glm::vec3 color = {1, 1, 0};
-
-    std::vector<int> data = {1, 2, 3, 4, 5};
 };
 
 template <>
 struct ImRefl::TypeSettings<player>
 {
-    static consteval std::vector<std::meta::info> GetAnnotations(std::string_view name)
+    static consteval std::vector<std::meta::info> GetHints(std::string_view name)
     {
         if (name == "level") return { std::meta::reflect_constant(ImRefl::slider(1, 50)) };
         return {};
