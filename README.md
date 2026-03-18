@@ -35,7 +35,9 @@ That's it! No macros or other setup needed!
     * `std::list<T>`
     * `std::forward_list<T>`
 
-* `std::variant<Ts...>` - however this can be improved; it currently uses typeid to get the type names, which can be hard to read.
+* `std::variant<Ts...>`.
+* `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>` and `T*`.
+    * These display the pointed at value which can be modified (if it exists), but the pointers themselves cannot be changed.
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
     * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
@@ -55,6 +57,53 @@ That's it! No macros or other setup needed!
 | `ImRefl::in_line` | By default, array-like values are show with each element on a separate line. However, for types such as `float[3]` representing a position, it may be desirable to show them on a single line, which this annotation is for. |
 | `ImRefl::non_resizeable` | For dynamic arrays, this annotation disables the ability to add and remove elements. |
 | `ImRefl::separator(title)` | Adds an ImGui separator line with optional title above the annotated field. | 
+
+### Third-party types
+It is possible to implement the rendering logic for custom types by providing an implementation of `ImRefl::Renderer` for your type. For example:
+
+```cpp
+class custom_type
+{
+    int data;
+public:
+    custom_type(int d) : data{d} {}
+    int get() const { return data; }
+    void set(int d) { data = d; }
+};
+
+template <ImRefl::Config config>
+struct ImRefl::Renderer<config, custom_type>
+{
+    static bool Render(const char* name, custom_type& type)
+    {
+        int inner = value.get();
+        if (Renderer<config, int>::Render(name, inner)) { // delegate to another Renderer
+            value.set(inner);
+            return true;
+        }
+        return false;
+    }
+
+    static bool Render(const char* name, const custom_type& type)
+    {
+        return ImRefl::DelegateToNonConst<config>(name, value);
+    }
+};
+```
+```
+```
+
+There are a few key things to point out:
+
+* Implementations of `Renderer` take a `ImRefl::Config` non-type template parameter. This is the mechanism for passing annotation data around; if a struct contains a data member of this type and it is annotated, then these annotations are accessible through the config. This means that third-party types can make use of the given `ImRefl` annotations as well as allowing users to define their own.
+* You can delegate to other `Renderer` implementations.
+* Implementing two version of the `Render` function can be tedious, and if your type is small and cheap to copy, you may want to implement the `const` version by simply taking a mutable copy and calling the non-`const` version. For that `ImRefl` provides the helper function `DelegateToNonConst` to do exactly this.
+
+### Helper functions
+This section is still a work in progress as we work out which functionality is useful to expose to users.
+
+* `DelegateToNonConst` - seen above.
+* ...
 
 ## Building the example
 ### Dependencies
@@ -87,5 +136,4 @@ target_link_libraries(example PRIVATE ImRefl)
 
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
-* Support for third party types such as the GLM library.
 * More annotations for other ImGui visual styles and customisation points.
