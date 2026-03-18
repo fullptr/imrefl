@@ -27,7 +27,8 @@ struct Renderer;
 template <Config config, typename T>
 concept renderable = requires(const char* name, T&& val)
 {
-    { ImRefl::Renderer<config, T>::Render(name, val) } -> std::convertible_to<bool>;
+    { ImRefl::Renderer<config, T>::Render(name, std::forward<T>(val)) }
+        -> std::convertible_to<bool>;
 };
 
 struct Ignore {};
