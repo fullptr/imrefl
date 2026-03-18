@@ -17,10 +17,13 @@ namespace ImRefl {
 
 struct Config
 {
-    std::meta::info self = {};
+    const std::meta::info* hints     = nullptr;
+    const std::size_t      num_hints = 0;
 
-    const std::meta::info* annotations     = nullptr;
-    std::size_t            num_annotations = 0;
+    consteval auto GetHints() -> std::span<const std::meta::info>
+    {
+        return {hints, num_hints};
+    }
 };
 
 template <Config config, typename T>
@@ -159,8 +162,7 @@ constexpr const char* enum_to_string(T value)
 template <typename T>
 consteval std::optional<T> fetch_annotation(Config config)
 {
-    const auto annos = std::span<const std::meta::info>{config.annotations, config.num_annotations};
-    for (const auto a : annos) {
+    for (const auto a : config.GetHints()) {
         if (std::meta::remove_cvref(std::meta::type_of(a)) == std::meta::remove_cvref(^^T)) {
             return std::meta::extract<T>(a);
         }
@@ -759,8 +761,8 @@ struct Renderer<config, T>
 
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
-                constexpr auto annos = std::define_static_array(get_annotations<member, T>());
-                constexpr auto new_config = Config{ .self=member, .annotations=annos.data(), .num_annotations=annos.size() };
+                constexpr auto render_hints = std::define_static_array(get_annotations<member, T>());
+                constexpr auto new_config = Config{render_hints.data(), render_hints.size()};
 
                 if constexpr (!has_annotation<Ignore>(new_config)) {
 
@@ -790,7 +792,7 @@ struct Renderer<config, T>
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
                 constexpr auto annos = std::define_static_array(get_annotations<member, T>());
-                constexpr auto new_config = Config{ .self=member, .annotations=annos.data(), .num_annotations=annos.size() };
+                constexpr auto new_config = Config{ .annotations=annos.data(), .num_annotations=annos.size() };
 
                 if constexpr (!has_annotation<Ignore>(new_config)) {
 
@@ -903,7 +905,7 @@ template <typename T>
 bool Input(const char* name, T&& value)
 {
     using Type = [:remove_cvref(^^T):];
-    constexpr auto config = Config{ .self=^^value };
+    constexpr auto config = Config{};
     if constexpr (renderable<config, Type>) {
         return Renderer<config, Type>::Render(name, std::forward<T>(value));
     } else {
