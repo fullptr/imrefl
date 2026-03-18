@@ -39,7 +39,7 @@ template <>
 struct ImRefl::ExternalAnnotations<player>
 {
     [[=ImRefl::slider(1, 50)]]
-    int level;
+    void* level;
 };
 
 int main()

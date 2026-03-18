@@ -98,7 +98,26 @@ There are a few key things to point out:
 * Implementations of `Renderer` take a `ImRefl::Config` non-type template parameter. This is the mechanism for passing annotation data around; if a struct contains a data member of this type and it is annotated, then these annotations are accessible through the config. This means that third-party types can make use of the given `ImRefl` annotations as well as allowing users to define their own.
 * These functions should return `bool`, indicating if the given value has changed. The non-`const` version thus should always return false.
 * You can delegate to other `Renderer` implementations.
-* Implementing two version of the `Render` function can be tedious, and if your type is small and cheap to copy, you may want to implement the `const` version by simply taking a mutable copy and calling the non-`const` version. For that `ImRefl` provides the helper function `DelegateToNonConst` to do exactly this.
+* Implementing two versions of the `Render` function can be tedious, and if your type is small and cheap to copy, you may want to implement the `const` version by simply taking a mutable copy and calling the non-`const` version. For that `ImRefl` provides the helper function `DelegateToNonConst` to do exactly this.
+
+### External annotations
+Sometimes it is not possible to modify a struct definition to add annotations. In this case, you can define a template specialization of `ImRefl::ExternalAnnotations<T>` for your struct `T` and add fields with annotations there. The type of these fields does not matter; only the name of the field.
+
+```cpp
+struct player
+{
+    int level = 14;
+};
+
+template <>
+struct ImRefl::ExternalAnnotations<player>
+{
+    [[=ImRefl::slider(1, 50)]]
+    void* level;
+};
+```
+```
+```
 
 ### Helper functions
 This section is still a work in progress as we work out which functionality is useful to expose to users.
