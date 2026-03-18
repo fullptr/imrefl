@@ -60,17 +60,17 @@ struct RenderHints
 };
 
 template <std::meta::info member, typename parent>
-consteval std::vector<std::meta::info> get_annotations()
+consteval std::vector<std::meta::info> get_hints()
 {
-    std::vector<std::meta::info> annos;
+    std::vector<std::meta::info> render_hints;
     for (const auto a : annotations_of(member)) {
-        annos.push_back(a);
+        render_hints.push_back(a);
     }
 
     for (const auto a : RenderHints<parent>::GetHints(identifier_of(member))) {
-        annos.push_back(a);
+        render_hints.push_back(a);
     }
-    return annos;
+    return render_hints;
 }
 
 struct Ignore {};
@@ -764,7 +764,7 @@ struct Renderer<config, T>
 
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
-                constexpr auto render_hints = std::define_static_array(get_annotations<member, T>());
+                constexpr auto render_hints = std::define_static_array(get_hints<member, T>());
                 constexpr auto new_config = Config{render_hints.data(), render_hints.size()};
 
                 if constexpr (!new_config.has_hint<Ignore>()) {
@@ -794,8 +794,8 @@ struct Renderer<config, T>
 
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : nsdm_of<T>()) {
-                constexpr auto annos = std::define_static_array(get_annotations<member, T>());
-                constexpr auto new_config = Config{ .annotations=annos.data(), .num_annotations=annos.size() };
+                constexpr auto render_hints = std::define_static_array(get_hints<member, T>());
+                constexpr auto new_config = Config{render_hints.data(), render_hints.size()};
 
                 if constexpr (!new_config.has_hint<Ignore>()) {
 
