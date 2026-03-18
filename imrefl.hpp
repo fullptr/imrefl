@@ -9,6 +9,7 @@
 #include <format>
 #include <memory>
 #include <meta>
+#include <ranges>
 #include <optional>
 #include <utility>
 #include <variant>
@@ -54,10 +55,7 @@ concept renderable = requires(const char* name, T&& val)
 };
 
 template <typename T>
-struct RenderHints
-{
-    static consteval std::vector<std::meta::info> GetHints() { return {}; }
-};
+struct RenderHints {};
 
 template <typename T>
 consteval auto nsdm_of()
@@ -66,22 +64,27 @@ consteval auto nsdm_of()
 	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
 }
 
+template <typename parent>
+consteval std::vector<std::meta::info> external_render_hints(std::meta::info member)
+{
+    for (const auto m : nsdm_of<RenderHints<parent>>()) {
+        if (identifier_of(member) == identifier_of(m)) {
+            return annotations_of(m);
+        }
+    }
+    return {};
+}
+
 template <std::meta::info member, typename parent>
 consteval std::vector<std::meta::info> get_hints()
 {
-    std::vector<std::meta::info> render_hints;
-    for (const auto a : annotations_of(member)) {
-        render_hints.push_back(a);
+    auto hints = annotations_of(member);
+    
+    for (const auto hint : external_render_hints<parent>(member)) {
+        hints.push_back(hint);
     }
 
-    for (const auto m : nsdm_of<RenderHints<parent>>()) {
-        if (identifier_of(member) == identifier_of(m)) {
-            for (const auto a : annotations_of(m)) {
-                render_hints.push_back(a);
-            }
-        }
-    }
-    return render_hints;
+    return hints;
 }
 
 struct Ignore {};
