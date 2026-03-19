@@ -1,24 +1,23 @@
+#include <array>
 #include <climits>
-#include <imgui.h>
-#define IMREFL_GLM
-#include "imrefl.hpp"
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <print>
+#include <set>
+#include <string>
+#include <vector>
+#include <vector>
 
+#include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include <print>
-
-#include <forward_list>
-#include <vector>
-#include <deque>
-#include <list>
-#include <set>
-#include <array>
-#include <vector>
-#include <string>
+#include "imrefl.hpp"
+#include "imrefl_glm.hpp"
 
 enum class weapon
 {
@@ -33,6 +32,8 @@ enum class weapon
 struct player
 {
     int level = 14;
+
+    glm::vec3 col = {0, 1, 1};
 };
 
 template <>
@@ -40,6 +41,9 @@ struct ImRefl::ExternalAnnotations<player>
 {
     [[=ImRefl::slider(1, 50)]]
     void* level;
+
+    [[=ImRefl::color]]
+    void* col;
 };
 
 int main()
