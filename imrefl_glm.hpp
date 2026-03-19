@@ -12,7 +12,7 @@
 
 namespace ImRefl {
 
-template <Config config, int Size, scalar T, glm::qualifier Qual>
+template <Config config, int Size, detail::scalar T, glm::qualifier Qual>
 struct Renderer<config, glm::vec<Size, T, Qual>>
 {
     static bool Render(const char* name, glm::vec<Size, T, Qual>& value)

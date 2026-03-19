@@ -6,6 +6,7 @@
 #include <print>
 #include <set>
 #include <string>
+#include <chrono>
 #include <vector>
 #include <vector>
 
@@ -40,6 +41,8 @@ struct player
     weapon current = weapon::wand;
 
     std::string_view name = "Link";
+
+    std::deque<int> values = {1, 2, 3, 4, 5};
 };
 
 int main()
