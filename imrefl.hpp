@@ -1,3 +1,6 @@
+#ifndef INCLUDED_IMREFL_H
+#define INCLUDED_IMREFL_H
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -920,3 +923,5 @@ bool Input(const char* name, T&& value)
 }
 
 }  // namespace ImRefl
+
+#endif // INCLUDED_IMREFL_H
