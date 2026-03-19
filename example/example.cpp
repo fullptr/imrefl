@@ -31,19 +31,15 @@ enum class weapon
 
 struct player
 {
+    [[=ImRefl::slider(1, 50)]]
     int level = 14;
 
-    glm::vec3 col = {0, 1, 1};
-};
-
-template <>
-struct ImRefl::ExternalAnnotations<player>
-{
-    [[=ImRefl::slider(1, 50)]]
-    void* level;
-
     [[=ImRefl::color]]
-    void* col;
+    glm::vec3 col = {0, 1, 1};
+
+    weapon current = weapon::wand;
+
+    std::string_view name = "Link";
 };
 
 int main()

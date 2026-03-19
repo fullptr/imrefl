@@ -543,6 +543,16 @@ struct Renderer<config, std::string>
     }
 };
 
+template <Config config>
+struct Renderer<config, std::string_view>
+{
+    static bool Render(const char* name, std::string_view value)
+    {
+        ImGui::Text("%s: %.*s", name, static_cast<int>(value.size()), value.data());
+        return false;
+    }
+};
+
 template <Config config, typename L, typename R>
 struct Renderer<config, std::pair<L, R>>
 {
