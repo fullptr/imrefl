@@ -1,9 +1,8 @@
+#ifndef INCLUDED_IMREFL_H
+#define INCLUDED_IMREFL_H
+
 #include <imgui.h>
 #include <imgui_internal.h>
-
-#ifdef IMREFL_GLM
-#include <glm/glm.hpp>
-#endif
 
 #include <concepts>
 #include <format>
@@ -544,22 +543,6 @@ struct Renderer<config, std::string>
     }
 };
 
-#ifdef IMREFL_GLM
-template <Config config, int Size, scalar T, glm::qualifier Qual>
-struct Renderer<config, glm::vec<Size, T, Qual>>
-{
-    static bool Render(const char* name, glm::vec<Size, T, Qual>& value)
-    {
-        return Renderer<config, std::span<T>>::Render(name, std::span{&value[0], Size});
-    }
-
-    static bool Render(const char* name, const glm::vec<Size, T, Qual>& value)
-    {
-        return Renderer<config, std::span<const T>>::Render(name, std::span{&value[0], Size});
-    }
-};
-#endif
-
 template <Config config, typename L, typename R>
 struct Renderer<config, std::pair<L, R>>
 {
@@ -920,3 +903,5 @@ bool Input(const char* name, T&& value)
 }
 
 }  // namespace ImRefl
+
+#endif // INCLUDED_IMREFL_H

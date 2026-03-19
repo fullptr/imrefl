@@ -1,8 +1,6 @@
 # ImRefl - A C++26 reflection library for ImGui
 
-A library utilising C++26 reflection features to generate ImGui rendering code at compile time for structs without the need for macro magic or addional boilerplate.
-
-This library is still very much of a proof-of-concept, and the interface will be unstable while I experiment with the ergonomics.
+A header-only library utilising C++26 reflection features to generate ImGui rendering code at compile time for structs without the need for macro magic or additional boilerplate.
 
 ![Example Image](images/imrefl.png)
 
@@ -19,6 +17,7 @@ That's it! No macros or other setup needed!
 
 ## Features
 ### Supported types
+#### `imrefl.hpp`
 * Aggregate structs.
 * Enum classes.
 * All arithmetic types.
@@ -38,8 +37,9 @@ That's it! No macros or other setup needed!
 * `std::variant<Ts...>`.
 * `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>` and `T*`.
     * These display the pointed at value which can be modified (if it exists), but the pointers themselves cannot be changed.
+
+#### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
-    * These are not enabled by default. To enable, add the line `#define INREFL_GLM` above the include.
 
 ### Annotations
 
@@ -113,8 +113,6 @@ struct ImRefl::ExternalAnnotations<player>
     [[=ImRefl::slider(1, 50)]]
     void* level;
 };
-```
-```
 ```
 
 ### Helper functions
