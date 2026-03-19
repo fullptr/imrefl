@@ -71,6 +71,45 @@ bool Input(const char* name, T&& value)
     return Renderer<config, Type>::Render(name, std::forward<T>(value));
 }
 
+// ============================================================================
+// LIBRARY ANNOTATIONS
+// ============================================================================
+
+struct Ignore {};
+inline static constexpr Ignore ignore {};
+
+struct Readonly {};
+inline static constexpr Readonly readonly {};
+
+struct InLine {};
+inline static constexpr InLine in_line {};
+
+struct NonResizable {};
+inline static constexpr NonResizable non_resizable {};
+
+struct Separator { const char* title; };
+template <std::size_t N>
+constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
+constexpr Separator separator() { return separator(""); }
+
+struct Color {};
+inline static constexpr Color color {};
+
+struct ColorWheel {};
+inline static constexpr ColorWheel color_wheel {};
+
+struct Slider { int min; int max; };
+constexpr Slider slider(int min, int max) { return {min, max}; }
+
+struct Drag { int min; int max; float speed; };
+constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
+
+struct String {};
+inline static constexpr String string {};
+
+struct Radio {};
+inline static constexpr Radio radio {};
+
 // Internal implementation of library; using things in this namespace is
 // discouraged as they may change.
 namespace detail {
@@ -200,45 +239,6 @@ bool render_pointer_as_value(const char* name, T* value)
 }
 
 } // namespace detail
-
-// ============================================================================
-// LIBRARY ANNOTATIONS
-// ============================================================================
-
-struct Ignore {};
-inline static constexpr Ignore ignore {};
-
-struct Readonly {};
-inline static constexpr Readonly readonly {};
-
-struct InLine {};
-inline static constexpr InLine in_line {};
-
-struct NonResizable {};
-inline static constexpr NonResizable non_resizable {};
-
-struct Separator { const char* title; };
-template <std::size_t N>
-constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
-constexpr Separator separator() { return separator(""); }
-
-struct Color {};
-inline static constexpr Color color {};
-
-struct ColorWheel {};
-inline static constexpr ColorWheel color_wheel {};
-
-struct Slider { int min; int max; };
-constexpr Slider slider(int min, int max) { return {min, max}; }
-
-struct Drag { int min; int max; float speed; };
-constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
-
-struct String {};
-inline static constexpr String string {};
-
-struct Radio {};
-inline static constexpr Radio radio {};
 
 // ============================================================================
 // LIBRARY UTILITY 
