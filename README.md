@@ -33,6 +33,7 @@ That's it! No macros or other setup needed!
 * `std::string`.
 * `std::string_view`.
 * `std::pair<L, R>`.
+* `std::tuple<Ts...>`.
 * `std::optional<T>`.
 * `std::variant<Ts...>`.
 * All containers satisfying `std::ranges::forward_range`, notably:

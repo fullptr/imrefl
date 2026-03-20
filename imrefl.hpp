@@ -155,6 +155,38 @@ bool DelegateToNonConst(const char* name, const T& value)
 // discouraged as they may change.
 namespace detail {
 
+// INTERNAL CONCEPTS
+
+template <typename T>
+concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
+
+template <typename T>
+concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
+
+template <typename T>
+concept aggregate = std::meta::is_aggregate_type(^^T);
+
+template<typename T>
+concept can_push_pop_back = requires(T t)
+{
+    { t.emplace_back() };
+    { t.pop_back() };
+};
+
+template<typename T>
+concept can_push_pop_front = requires(T t)
+{
+    { t.emplace_front() };
+    { t.pop_front() };
+};
+
+template <typename T>
+concept tuple_like = requires {
+    std::tuple_size<T>::value;
+};
+
+// INTERNAL HELPERS
+
 template <typename T>
 consteval auto nsdm_of()
 {
@@ -185,28 +217,14 @@ consteval std::vector<std::meta::info> get_all_attns()
     return hints;
 }
 
-template <typename T>
-concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
-
-template <typename T>
-concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
-
-template <typename T>
-concept aggregate = std::meta::is_aggregate_type(^^T);
-
-template<typename T>
-concept can_push_pop_back = requires(T t)
+consteval auto integer_sequence(std::size_t max)
 {
-    { t.emplace_back() };
-    { t.pop_back() };
-};
-
-template<typename T>
-concept can_push_pop_front = requires(T t)
-{
-    { t.emplace_front() };
-    { t.pop_front() };
-};
+    std::vector<std::size_t> values;
+    for (std::size_t i = 0; i != max; ++i) {
+        values.push_back(i);
+    }
+    return std::define_static_array(values);
+}
 
 template <detail::scoped_enum T>
 consteval auto enums_of()
@@ -225,48 +243,35 @@ constexpr const char* enum_to_string(T value)
     return "<unnamed>";
 }
 
-template <std::signed_integral T>
+template <scalar T>
 consteval auto num_type()
 {
-    switch (sizeof(T)) {
-        case 1: return ImGuiDataType_S8;
-        case 2: return ImGuiDataType_S16;
-        case 4: return ImGuiDataType_S32;
-        case 8: return ImGuiDataType_S64;
+    if constexpr (std::signed_integral<T>) {
+        switch (sizeof(T)) {
+            case 1: return ImGuiDataType_S8;
+            case 2: return ImGuiDataType_S16;
+            case 4: return ImGuiDataType_S32;
+            case 8: return ImGuiDataType_S64;
+        }
     }
-    throw "unknown signed integral size";
+    else if constexpr (std::unsigned_integral<T>) {
+        switch (sizeof(T)) {
+            case 1: return ImGuiDataType_U8;
+            case 2: return ImGuiDataType_U16;
+            case 4: return ImGuiDataType_U32;
+            case 8: return ImGuiDataType_U64;
+        }
+    }
+    else if constexpr (std::floating_point<T>) {
+        switch (sizeof(T)) {
+            case 4: return ImGuiDataType_Float;
+            case 8: return ImGuiDataType_Double;
+        }
+    }
+    throw "unknown scalar type";
 }
 
-template <std::unsigned_integral T>
-consteval auto num_type()
-{
-    switch (sizeof(T)) {
-        case 1: return ImGuiDataType_U8;
-        case 2: return ImGuiDataType_U16;
-        case 4: return ImGuiDataType_U32;
-        case 8: return ImGuiDataType_U64;
-    }
-    throw "unknown unsigned integral size";
-}
-
-template <std::floating_point T>
-consteval auto num_type()
-{
-    switch (sizeof(T)) {
-        case 4: return ImGuiDataType_Float;
-        case 8: return ImGuiDataType_Double;
-    }
-    throw "unknown floating point size";
-}
-
-consteval auto integer_sequence(std::size_t max)
-{
-    std::vector<std::size_t> values;
-    for (std::size_t i = 0; i != max; ++i) {
-        values.push_back(i);
-    }
-    return std::define_static_array(values);
-}
+// INTERNAL RENDERER IMPLEMENTATIONS
 
 template <Config config, typename T>
 bool render_pointer_as_value(const char* name, T* value)
@@ -402,6 +407,41 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
     }
     ImGui::Text("%s", name);
     ImGui::EndGroup();
+    return false;
+}
+
+template <Config config, tuple_like TupleType>
+bool render_tuple_like(const char* name, TupleType& value)
+{
+    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
+
+    ImGuiID guard{name};
+    bool changed = false;
+
+    ImGui::Text("%s", name);
+    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+        ImGuiID guard{index};
+        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
+        changed = Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value)) || changed;
+    }
+
+    return changed;
+}
+
+template <Config config, tuple_like TupleType>
+bool render_tuple_like(const char* name, const TupleType& value)
+{
+    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
+
+    ImGuiID guard{name};
+
+    ImGui::Text("%s", name);
+    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+        ImGuiID guard{index};
+        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
+        Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value));
+    }
+
     return false;
 }
 
@@ -718,20 +758,26 @@ struct Renderer<config, std::pair<L, R>>
 {
     static bool Render(const char* name, std::pair<L, R>& value)
     {
-        ImGuiID guard{name};
-        ImGui::Text("%s", name);
-        const bool first_changed = Renderer<config, L>::Render("first", value.first);
-        const bool second_changed = Renderer<config, R>::Render("second", value.second);
-        return first_changed || second_changed;
+        return detail::render_tuple_like<config>(name, value);
     }
 
     static bool Render(const char* name, const std::pair<L, R>& value)
     {
-        ImGuiID guard{name};
-        ImGui::Text("%s", name);
-        Renderer<config, L>::Render("first", value.first);
-        Renderer<config, R>::Render("second", value.second);
-        return false;
+        return detail::render_tuple_like<config>(name, value);
+    }
+};
+
+template <Config config, typename... Ts>
+struct Renderer<config, std::tuple<Ts...>>
+{
+    static bool Render(const char* name, std::tuple<Ts...>& value)
+    {
+        return detail::render_tuple_like<config>(name, value);
+    }
+
+    static bool Render(const char* name, const std::tuple<Ts...>& value)
+    {
+        return detail::render_tuple_like<config>(name, value);
     }
 };
 
