@@ -34,7 +34,7 @@ enum class weapon
 struct player
 {
     std::tuple<int, float, std::string> data_tuple = {};
-    std::variant<int, float, std::string> data_variant = {5};
+    std::pair<int, float> data_pair = {};
 };
 
 int main()

@@ -208,6 +208,11 @@ concept can_push_pop_front = requires(T t)
     { t.pop_front() };
 };
 
+template <typename T>
+concept tuple_like = requires {
+    std::tuple_size<T>::value;
+};
+
 template <detail::scoped_enum T>
 consteval auto enums_of()
 {
@@ -402,6 +407,41 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
     }
     ImGui::Text("%s", name);
     ImGui::EndGroup();
+    return false;
+}
+
+template <Config config, tuple_like TupleType>
+bool render_tuple_like(const char* name, TupleType& value)
+{
+    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
+
+    ImGuiID guard{name};
+    bool changed = false;
+
+    ImGui::Text("%s", name);
+    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+        ImGuiID guard{index};
+        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
+        changed = Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value)) || changed;
+    }
+
+    return changed;
+}
+
+template <Config config, tuple_like TupleType>
+bool render_tuple_like(const char* name, const TupleType& value)
+{
+    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
+
+    ImGuiID guard{name};
+
+    ImGui::Text("%s", name);
+    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+        ImGuiID guard{index};
+        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
+        Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value));
+    }
+
     return false;
 }
 
@@ -718,20 +758,12 @@ struct Renderer<config, std::pair<L, R>>
 {
     static bool Render(const char* name, std::pair<L, R>& value)
     {
-        ImGuiID guard{name};
-        ImGui::Text("%s", name);
-        const bool first_changed = Renderer<config, L>::Render("first", value.first);
-        const bool second_changed = Renderer<config, R>::Render("second", value.second);
-        return first_changed || second_changed;
+        return detail::render_tuple_like<config>(name, value);
     }
 
     static bool Render(const char* name, const std::pair<L, R>& value)
     {
-        ImGuiID guard{name};
-        ImGui::Text("%s", name);
-        Renderer<config, L>::Render("first", value.first);
-        Renderer<config, R>::Render("second", value.second);
-        return false;
+        return detail::render_tuple_like<config>(name, value);
     }
 };
 
@@ -740,31 +772,12 @@ struct Renderer<config, std::tuple<Ts...>>
 {
     static bool Render(const char* name, std::tuple<Ts...>& value)
     {
-        ImGuiID guard{name};
-        bool changed = false;
-
-        ImGui::Text("%s", name);
-        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
-            ImGuiID guard{index};
-            changed = Renderer<config, Ts...[index]>::Render(std::to_string(index).c_str(), std::get<index>(value)) || changed;
-        }
-
-        return changed;
+        return detail::render_tuple_like<config>(name, value);
     }
 
     static bool Render(const char* name, const std::tuple<Ts...>& value)
     {
-        ImGuiID guard{name};
-        ImGui::BeginDisabled();
-
-        ImGui::Text("%s", name);
-        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
-            ImGuiID guard{index};
-            Renderer<config, Ts...[index]>::Render(std::to_string(index).c_str(), std::get<index>(value));
-        }
-
-        ImGui::EndDisabled();
-        return false;
+        return detail::render_tuple_like<config>(name, value);
     }
 };
 
