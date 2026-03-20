@@ -6,6 +6,7 @@
 #include <print>
 #include <set>
 #include <string>
+#include <chrono>
 #include <vector>
 #include <vector>
 
@@ -31,19 +32,18 @@ enum class weapon
 
 struct player
 {
+    [[=ImRefl::slider(1, 50)]]
     int level = 14;
 
-    glm::vec3 col = {0, 1, 1};
-};
-
-template <>
-struct ImRefl::ExternalAnnotations<player>
-{
-    [[=ImRefl::slider(1, 50)]]
-    void* level;
-
     [[=ImRefl::color]]
-    void* col;
+    glm::vec3 col = {0, 1, 1};
+
+    weapon current = weapon::wand;
+
+    std::string_view name = "Link";
+
+    std::deque<int> values = {1, 2, 3, 4, 5};
+    const std::shared_ptr<int> p = std::make_shared<int>(10);
 };
 
 int main()

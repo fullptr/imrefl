@@ -24,19 +24,25 @@ That's it! No macros or other setup needed!
     * `bool` is rendered as a checkbox.
     * `char` is treated as a character rather than an 8 bit integer. 
     * `long double` is treated as a `double` as it is not supported by ImGui out of the box.
+* `T*`.
+    * Shows the pointed-at value (or "nullptr").
+    * The value can be changed, but the pointer cannot be reassigned.
+* `T[N]` (C-style arrays).
+* `std::array<T, N>`.
+* `std::span<T>`.
 * `std::string`.
+* `std::string_view`.
 * `std::pair<L, R>`.
 * `std::optional<T>`.
-* `std::array<T, N>`, `std::span<T>` and C-style arrays `T[N]`.
-* All containers satisfying `std::ranges::forward_range`, notably:
-    * `std::vector<T>`
-    * `std::deque<T>`
-    * `std::list<T>`
-    * `std::forward_list<T>`
-
 * `std::variant<Ts...>`.
-* `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>` and `T*`.
-    * These display the pointed at value which can be modified (if it exists), but the pointers themselves cannot be changed.
+* All containers satisfying `std::ranges::forward_range`, notably:
+    * `std::vector<T>`.
+    * `std::deque<T>`.
+    * `std::list<T>`.
+    * `std::forward_list<T>`.
+
+* `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
+    * Acts the same as `T*`.
 
 #### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
@@ -118,8 +124,9 @@ struct ImRefl::ExternalAnnotations<player>
 ### Helper functions
 This section is still a work in progress as we work out which functionality is useful to expose to users.
 
-* `DelegateToNonConst` - seen above.
-* ...
+* `ImGuiID` - this is a helper RAII wrapper class for `ImGui::PushID/PopId`.
+* `TreeNodeExNoDisable` - this is a wrapper function for `ImGui::TreeNodeEx`. This is useful for creating a tree node that is still expandable/collapsible when in read-only mode.
+* `DelegateToNonConst` - a helper function for implementing a `const&` render function by calling the `&` version (by making a temporary copy). See the third-party example above.
 
 ## Building the example
 ### Dependencies

@@ -8,13 +8,21 @@
 #include <format>
 #include <memory>
 #include <meta>
-#include <ranges>
 #include <optional>
+#include <ranges>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
 namespace ImRefl {
 
+// ============================================================================
+// LIBRARY CORE API
+// ============================================================================
+
+// Consteval-only type for passing annotation information to
+// Renderer implementations.
 struct Config
 {
     const std::meta::info* attns     = nullptr;
@@ -39,18 +47,112 @@ struct Config
     }
 };
 
+// Specialize this struct for different types to enable them for
+// rendering via ImRefl.
 template <Config config, typename T>
-struct Renderer;
-
-template <Config config, typename T>
-concept renderable = requires(const char* name, T&& val)
+struct Renderer
 {
-    { ImRefl::Renderer<config, T>::Render(name, std::forward<T>(val)) }
-        -> std::convertible_to<bool>;
+    static_assert(sizeof(T) == 0, "No Renderer implementation for type T");
 };
 
+// Specialize this struct for different types by giving it fields
+// with names matching fields on the type T. Annotations on fields of
+// this type will be used for the corresponding fields on T.
 template <typename T>
-struct ExternalAnnotations {};
+struct ExternalAnnotations
+{};
+
+// The main entry point for rendering.
+template <typename T>
+bool Input(const char* name, T&& value)
+{
+    using Type = [:remove_cvref(^^T):];
+    constexpr auto config = Config{};
+    return Renderer<config, Type>::Render(name, std::forward<T>(value));
+}
+
+// ============================================================================
+// LIBRARY ANNOTATIONS
+// ============================================================================
+
+struct Ignore {};
+inline static constexpr Ignore ignore {};
+
+struct Readonly {};
+inline static constexpr Readonly readonly {};
+
+struct InLine {};
+inline static constexpr InLine in_line {};
+
+struct NonResizable {};
+inline static constexpr NonResizable non_resizable {};
+
+struct Separator { const char* title; };
+template <std::size_t N>
+constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
+constexpr Separator separator() { return separator(""); }
+
+struct Color {};
+inline static constexpr Color color {};
+
+struct ColorWheel {};
+inline static constexpr ColorWheel color_wheel {};
+
+struct Slider { int min; int max; };
+constexpr Slider slider(int min, int max) { return {min, max}; }
+
+struct Drag { int min; int max; float speed; };
+constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
+
+struct String {};
+inline static constexpr String string {};
+
+struct Radio {};
+inline static constexpr Radio radio {};
+
+// ============================================================================
+// LIBRARY UTILITY 
+// ============================================================================
+
+// An RAII wrapper for ImGui::PushID/PopID
+struct ImGuiID
+{
+    ImGuiID(const char* id) { ImGui::PushID(id); }
+    ImGuiID(std::size_t id) { ImGui::PushID(id); }
+    ImGuiID(const ImGuiID&) = delete;
+    ImGuiID& operator=(const ImGuiID&) = delete;
+    ImGuiID(ImGuiID&&) = delete;
+    ImGuiID& operator=(ImGuiID&&) = delete;
+    ~ImGuiID() { ImGui::PopID(); }
+};
+
+// A wrapper for TreeNodeEx that allows the tree to be opened and collapsed
+// even in read-only mode. 
+inline bool TreeNodeExNoDisable(const char* label)
+{
+    const int flags = ImGuiTreeNodeFlags_DefaultOpen;
+    const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
+    for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
+    const bool open = ImGui::TreeNodeEx(label, flags);
+    for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
+    return open;
+}
+
+// A helper function that renders a const variable by making a mutable
+// copy and calling the mutable overload for Render.
+template <Config config, typename T>
+bool DelegateToNonConst(const char* name, const T& value)
+{
+    T mutable_value = value;
+    ImGui::BeginDisabled();
+    Renderer<config, T>::Render(name, mutable_value);
+    ImGui::EndDisabled();
+    return false;
+}
+
+// Internal implementation of library; using things in this namespace is
+// discouraged as they may change.
+namespace detail {
 
 template <typename T>
 consteval auto nsdm_of()
@@ -82,65 +184,6 @@ consteval std::vector<std::meta::info> get_all_attns()
     return hints;
 }
 
-struct Ignore {};
-inline static constexpr Ignore ignore {};
-
-struct Readonly {};
-inline static constexpr Readonly readonly {};
-
-struct InLine {};
-inline static constexpr InLine in_line {};
-
-struct NonResizable {};
-inline static constexpr NonResizable non_resizable {};
-
-struct Separator { const char* title; };
-template <std::size_t N>
-constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
-constexpr Separator separator() { return separator(""); }
-
-struct Color {};
-inline static constexpr Color color {};
-
-struct ColorWheel {};
-inline static constexpr ColorWheel color_wheel {};
-
-// The default "input" way to display a scalar. Not really
-// useful in exposing publicly but done so for consistency.
-// I would call this Input but that name is taken.
-struct Normal {};
-inline static constexpr Normal normal {};
-
-// TODO: Give this another think; should these be floats?
-// Or should we have slider() and sliderf(), which I don't really like.
-struct Slider { int min; int max; };
-constexpr Slider slider(int min, int max) { return {min, max}; }
-
-// TODO: Same todo as the above, but speed is always a float
-// since that is what ImGui supports.
-struct Drag { int min; int max; float speed; };
-constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
-
-struct String {};
-inline static constexpr String string {};
-
-struct Radio {};
-inline static constexpr Radio radio {};
-
-struct ImGuiID
-{
-    ImGuiID(const char* id) { ImGui::PushID(id); }
-    ImGuiID(std::size_t id) { ImGui::PushID(id); }
-    ImGuiID(const ImGuiID&) = delete;
-    ImGuiID& operator=(const ImGuiID&) = delete;
-    ImGuiID(ImGuiID&&) = delete;
-    ImGuiID& operator=(ImGuiID&&) = delete;
-    ~ImGuiID() { ImGui::PopID(); }
-};
-
-// Magic spell to make writing a variant visitor nicer.
-template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-
 template <typename T>
 concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
 
@@ -164,13 +207,13 @@ concept can_push_pop_front = requires(T t)
     { t.pop_front() };
 };
 
-template <scoped_enum T>
+template <detail::scoped_enum T>
 consteval auto enums_of()
 {
     return std::define_static_array(std::meta::enumerators_of(^^T));
 }
 
-template <scoped_enum T>
+template <detail::scoped_enum T>
 constexpr const char* enum_to_string(T value)
 {
     template for (constexpr auto e : enums_of<T>()) {
@@ -215,9 +258,6 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-template <typename... Ts>
-struct Tag {};
-
 consteval auto integer_sequence(std::size_t max)
 {
     std::vector<std::size_t> values;
@@ -228,7 +268,7 @@ consteval auto integer_sequence(std::size_t max)
 }
 
 template <Config config, typename T>
-bool RenderPointerAsValue(const char* name, T* value)
+bool render_pointer_as_value(const char* name, T* value)
 {
     if (value) {
         return Renderer<config, T>::Render(name, *value);
@@ -238,18 +278,8 @@ bool RenderPointerAsValue(const char* name, T* value)
     }
 }
 
-inline bool TreeNodeExNoDisable(const char* label)
-{
-    const int flags = ImGuiTreeNodeFlags_DefaultOpen;
-    const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
-    for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
-    const bool open = ImGui::TreeNodeEx(label, flags);
-    for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
-    return open;
-}
-
 template <Config config, std::ranges::forward_range R>
-bool RenderForwardRange(const char* name, R& range)
+bool render_forward_range(const char* name, R& range)
 {
     constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
     using element_type = std::ranges::range_value_t<R>; 
@@ -257,7 +287,7 @@ bool RenderForwardRange(const char* name, R& range)
     ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name)) {
-        if constexpr (!config.HasAttn<NonResizable>() && can_push_pop_front<R>) {
+        if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
             ImGuiID id{"front"};
             const float button_size = ImGui::GetFrameHeight();
             const ImGuiStyle& style = ImGui::GetStyle();
@@ -299,8 +329,8 @@ bool RenderForwardRange(const char* name, R& range)
             ++i;
         }
 
-        if constexpr (!config.HasAttn<NonResizable>() && can_push_pop_back<R>) {
-            if (!can_push_pop_front<R> || i > 0) {
+        if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
+            if (!detail::can_push_pop_front<R> || i > 0) {
                 ImGuiID id{"back"};
                 const float button_size = ImGui::GetFrameHeight();
                 const ImGuiStyle& style = ImGui::GetStyle();
@@ -320,7 +350,7 @@ bool RenderForwardRange(const char* name, R& range)
 }
 
 template <Config config, std::ranges::forward_range R>
-bool RenderForwardRange(const char* name, const R& range)
+bool render_forward_range(const char* name, const R& range)
 {
     using element_type = std::ranges::range_value_t<R>; 
 
@@ -336,39 +366,30 @@ bool RenderForwardRange(const char* name, const R& range)
     return false; 
 }
 
-consteval bool CheckScalarStyle(Config config)
+template <Config config, detail::scalar T>
+bool render_scalar_n(const char* name, T* val, std::size_t count)
 {
-    std::size_t count = 0;
-    if (config.HasAttn<Normal>()) { ++count; }
-    if (config.HasAttn<Slider>()) { ++count; }
-    if (config.HasAttn<Drag>())   { ++count; }
-    return count < 2;
-}
-
-template <Config config, scalar T>
-bool RenderScalarN(const char* name, T* val, std::size_t count)
-{
-    static_assert(CheckScalarStyle(config), "too many visual styles given for scalar type");
+    static_assert(!(config.HasAttn<Slider>() && config.HasAttn<Drag>()), "too many visual styles given for scalar type");
 
     if constexpr (constexpr auto style = config.FetchAttn<Slider>()) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
-        return ImGui::SliderScalarN(name, num_type<T>(), val, count, &min, &max);
+        return ImGui::SliderScalarN(name, detail::num_type<T>(), val, count, &min, &max);
     }
     else if constexpr (constexpr auto style = config.FetchAttn<Drag>()) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
         const auto speed = style->speed;
-        return ImGui::DragScalarN(name, num_type<T>(), val, count, speed, &min, &max);
+        return ImGui::DragScalarN(name, detail::num_type<T>(), val, count, speed, &min, &max);
     }
     else {
         const T step = 1; // Only used for integral types
-        return ImGui::InputScalarN(name, num_type<T>(), val, count, &step);
+        return ImGui::InputScalarN(name, detail::num_type<T>(), val, count, &step);
     }
 }
 
-template <Config config, scalar T>
-bool RenderScalarN(const char* name, const T* val, std::size_t count)
+template <Config config, detail::scalar T>
+bool render_scalar_n(const char* name, const T* val, std::size_t count)
 {
     ImGui::BeginGroup();
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
@@ -383,19 +404,200 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     return false;
 }
 
-// A helper function that renders a const variable by making a mutable
-// copy and calling the mutable overload for Render.
-template <Config config, typename T>
-bool DelegateToNonConst(const char* name, const T& value)
-{
-    T mutable_value = value;
-    ImGui::BeginDisabled();
-    Renderer<config, T>::Render(name, mutable_value);
-    ImGui::EndDisabled();
-    return false;
-}
+} // namespace detail
 
-// Renderer Implementations
+// ============================================================================
+// RENDERER IMPLEMENTATIONS 
+// ============================================================================
+
+template <Config config, detail::aggregate T>
+struct Renderer<config, T>
+{
+    static bool Render(const char* name, T& x)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
+
+        if (TreeNodeExNoDisable(name)) {
+            template for (constexpr auto member : detail::nsdm_of<T>()) {
+                constexpr auto attns = std::define_static_array(detail::get_all_attns<member, T>());
+                constexpr auto new_config = Config{attns.data(), attns.size()};
+
+                if constexpr (!new_config.HasAttn<Ignore>()) {
+
+                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                        ImGui::SeparatorText(separator->title);
+                    }
+
+                    using element_type = [:remove_const(type_of(member)):];
+                    if constexpr (new_config.HasAttn<Readonly>()) {
+                        Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
+                    } else {
+                        changed = Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
+                    }
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const T& x)
+    {
+        ImGuiID guard{name};
+
+        if (TreeNodeExNoDisable(name)) {
+            template for (constexpr auto member : detail::nsdm_of<T>()) {
+                constexpr auto attns = std::define_static_array(detail::get_all_attns<member, T>());
+                constexpr auto new_config = Config{attns.data(), attns.size()};
+
+                if constexpr (!new_config.HasAttn<Ignore>()) {
+
+                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                        ImGui::SeparatorText(separator->title);
+                    }
+
+                    using element_type = [:remove_const(type_of(member)):];
+                    Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        return false;
+    }
+};
+
+template <Config config, detail::scoped_enum T>
+struct Renderer<config, T>
+{
+    static bool Render(const char* name, T& value)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
+        if constexpr (config.HasAttn<Radio>()) {
+            ImGui::Text("%s", name);
+            template for (constexpr auto e : detail::enums_of<T>()) {
+                constexpr auto enum_name = std::meta::identifier_of(e);
+                ImGui::SameLine();
+                if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
+                    value = [:e:];
+                    changed = true;
+                }
+            }
+        } else {
+            const auto value_name = detail::enum_to_string(value);
+            if (ImGui::BeginCombo(name, value_name)) {
+                template for (constexpr auto e : detail::enums_of<T>()) {
+                    constexpr auto enum_name = std::meta::identifier_of(e);
+                    if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
+                        value = [:e:];
+                        changed = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+        return changed;
+    }
+
+    static bool Render(const char* name, const T& value)
+    {
+        return DelegateToNonConst<config>(name, value);
+    }
+};
+
+template <Config config, detail::scalar T>
+struct Renderer<config, T>
+{
+    static bool Render(const char* name, T& value)
+    {
+        // Treat char as a single character string, rather than an integral
+        if constexpr (^^T == ^^char) {
+            char buffer[2] = {value, '\0'};
+            if (ImGui::InputText(name, buffer, sizeof(buffer))) {
+                value = buffer[0];
+                return true;
+            }
+            return false;
+        }
+
+        // Treat long double as a simple double as ImGui does not support it natively
+        else if constexpr (^^T == ^^long double) {
+            double temp = static_cast<double>(value);
+            if (Renderer<config, double>::Render(name, temp)) {
+                value = temp;
+                return true;
+            }
+            return false;
+        }
+
+        else {
+            return detail::render_scalar_n<config, T>(name, &value, 1);
+        }
+    }
+
+    static bool Render(const char* name, const T& value)
+    {
+        return DelegateToNonConst<config>(name, value);
+    }
+};
+
+template <Config config>
+struct Renderer<config, bool>
+{
+    static bool Render(const char* name, bool& value)
+    {
+        return ImGui::Checkbox(name, &value);
+    }
+
+    static bool Render(const char* name, const bool& value)
+    {
+        return DelegateToNonConst<config>(name, value);
+    }
+};
+
+template <Config config, typename T>
+struct Renderer<config, T*>
+{
+    static bool Render(const char* name, T* value)
+    {
+        return detail::render_pointer_as_value<config, T>(name, value);
+    }
+};
+
+template <Config config, typename T, std::size_t N> requires (N > 0) 
+struct Renderer<config, T[N]>
+{
+    using Type = T[N];
+
+    static bool Render(const char* name, Type& arr)
+    {
+        return Renderer<config, std::span<T>>::Render(name, arr);
+    }
+
+    static bool Render(const char* name, const Type& arr)
+    {
+        return Renderer<config, std::span<const T>>::Render(name, arr);
+    }
+};
+
+template <Config config, typename T, std::size_t N> requires (N > 0) 
+struct Renderer<config, std::array<T, N>>
+{
+    static bool Render(const char* name, std::array<T, N>& arr)
+    {
+        return Renderer<config, std::span<T>>::Render(name, arr);
+    }
+
+    static bool Render(const char* name, const std::array<T, N>& arr)
+    {
+        return Renderer<config, std::span<const T>>::Render(name, arr);
+    }
+};
 
 template <Config config, typename T>
 struct Renderer<config, std::span<T>>
@@ -428,11 +630,11 @@ struct Renderer<config, std::span<T>>
         }
 
         // scalar spans can be rendered in a single line if specified.
-        if constexpr (scalar<T> && config.HasAttn<InLine>()) {
-            return RenderScalarN<config>(name, arr.data(), arr.size());
+        if constexpr (detail::scalar<T> && config.HasAttn<InLine>()) {
+            return detail::render_scalar_n<config>(name, arr.data(), arr.size());
         }
 
-        return RenderForwardRange<config>(name, arr);
+        return detail::render_forward_range<config>(name, arr);
     }
 };
 
@@ -462,54 +664,11 @@ struct Renderer<config, std::span<const T>>
         }
 
         // scalar spans can be rendered in a single line if specified.
-        if constexpr (scalar<T> && config.HasAttn<InLine>()) {
-            return RenderScalarN<config>(name, arr.data(), arr.size());
+        if constexpr (detail::scalar<T> && config.HasAttn<InLine>()) {
+            return detail::render_scalar_n<config>(name, arr.data(), arr.size());
         }
 
-        return RenderForwardRange<config>(name, arr);
-    }
-};
-
-template <Config config, typename T, std::size_t N> requires (N > 0) 
-struct Renderer<config, T[N]>
-{
-    using Type = T[N];
-    static bool Render(const char* name, Type& arr)
-    {
-        return Renderer<config, std::span<T>>::Render(name, arr);
-    }
-
-    static bool Render(const char* name, const Type& arr)
-    {
-        return Renderer<config, std::span<const T>>::Render(name, arr);
-    }
-};
-
-template <Config config, typename T, std::size_t N> requires (N > 0) 
-struct Renderer<config, std::array<T, N>>
-{
-    static bool Render(const char* name, std::array<T, N>& arr)
-    {
-        return Renderer<config, std::span<T>>::Render(name, arr);
-    }
-
-    static bool Render(const char* name, const std::array<T, N>& arr)
-    {
-        return Renderer<config, std::span<const T>>::Render(name, arr);
-    }
-};
-
-template <Config config, std::ranges::forward_range R>
-struct Renderer<config, R>
-{
-    static bool Render(const char* name, R& range)
-    {
-        return RenderForwardRange<config>(name, range);
-    }
-
-    static bool Render(const char* name, const R& range)
-    {
-        return RenderForwardRange<config>(name, range);
+        return detail::render_forward_range<config>(name, arr);
     }
 };
 
@@ -539,6 +698,16 @@ struct Renderer<config, std::string>
     static bool Render(const char* name, const std::string& value)
     {
         ImGui::Text("%s: %s", name, value.c_str());
+        return false;
+    }
+};
+
+template <Config config>
+struct Renderer<config, std::string_view>
+{
+    static bool Render(const char* name, std::string_view value)
+    {
+        ImGui::Text("%s: %.*s", name, static_cast<int>(value.size()), value.data());
         return false;
     }
 };
@@ -627,7 +796,7 @@ struct Renderer<config, std::variant<Ts...>>
 
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
-            template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
                 ImGuiID id{index};
                 if (ImGui::Selectable(type_names[index])) {
                     value.template emplace<index>();
@@ -639,7 +808,7 @@ struct Renderer<config, std::variant<Ts...>>
         
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
             if (index == value.index()) {
                 changed = Renderer<config, Ts...[index]>::Render(name, std::get<index>(value)) || changed;
             }
@@ -658,7 +827,7 @@ struct Renderer<config, std::variant<Ts...>>
 
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
-            template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+            template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
                 ImGuiID id{index};
                 ImGui::Selectable(type_names[index]);
             }
@@ -667,7 +836,7 @@ struct Renderer<config, std::variant<Ts...>>
         
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-        template for (constexpr auto index : integer_sequence(sizeof...(Ts))) {
+        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
             if (index == value.index()) {
                 Renderer<config, Ts...[index]>::Render(name, std::get<index>(value));
             }
@@ -678,38 +847,42 @@ struct Renderer<config, std::variant<Ts...>>
     }
 };
 
+template <Config config, std::ranges::forward_range R>
+struct Renderer<config, R>
+{
+    static bool Render(const char* name, R& range)
+    {
+        return detail::render_forward_range<config>(name, range);
+    }
+
+    static bool Render(const char* name, const R& range)
+    {
+        return detail::render_forward_range<config>(name, range);
+    }
+};
+
 template <Config config, typename T, typename Deleter>
 struct Renderer<config, std::unique_ptr<T, Deleter>>
 {
-    static bool Render(const char* name, std::unique_ptr<T, Deleter>& value)
-    {
-        return RenderPointerAsValue<config, T>(name, value.get());
-    }
-
     static bool Render(const char* name, const std::unique_ptr<T, Deleter>& value)
     {
-        return RenderPointerAsValue<config, T>(name, value.get());
+        return detail::render_pointer_as_value<config, T>(name, value.get());
     }
 };
 
 template <Config config, typename T>
 struct Renderer<config, std::shared_ptr<T>>
 {
-    static bool Render(const char* name, std::shared_ptr<T>& value)
-    {
-        return RenderPointerAsValue<config, T>(name, value.get());
-    }
-
     static bool Render(const char* name, const std::shared_ptr<T>& value)
     {
-        return RenderPointerAsValue<config, T>(name, value.get());
+        return detail::render_pointer_as_value<config, T>(name, value.get());
     }
 };
 
 template <Config config, typename T>
 struct Renderer<config, std::weak_ptr<T>>
 {
-    static bool Render(const char* name, std::weak_ptr<T>& value)
+    static bool Render(const char* name, const std::weak_ptr<T>& value)
     {
         if (value.expired()) {
             ImGui::Text("%s: <expired>", name);
@@ -717,190 +890,7 @@ struct Renderer<config, std::weak_ptr<T>>
         }
         return Renderer<config, std::shared_ptr<T>>::Render(name, value.lock());
     }
-
-    static bool Render(const char* name, const std::weak_ptr<T>& value)
-    {
-        return DelegateToNonConst<config>(name, value);
-    }
 };
-
-template <Config config, typename T>
-struct Renderer<config, T*>
-{
-    using Ptr = T*;
-
-    static bool Render(const char* name, Ptr& value)
-    {
-        return RenderPointerAsValue<config, T>(name, value);
-    }
-
-    static bool Render(const char* name, const Ptr& value)
-    {
-        return RenderPointerAsValue<config, T>(name, value);
-    }
-};
-
-template <Config config, aggregate T>
-struct Renderer<config, T>
-{
-    static bool Render(const char* name, T& x)
-    {
-        ImGuiID guard{name};
-        bool changed = false;
-
-        if (TreeNodeExNoDisable(name)) {
-            template for (constexpr auto member : nsdm_of<T>()) {
-                constexpr auto attns = std::define_static_array(get_all_attns<member, T>());
-                constexpr auto new_config = Config{attns.data(), attns.size()};
-
-                if constexpr (!new_config.HasAttn<Ignore>()) {
-
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
-                    }
-
-                    using element_type = [:remove_const(type_of(member)):];
-                    if constexpr (new_config.HasAttn<Readonly>()) {
-                        Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
-                    } else {
-                        changed = Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
-                    }
-                }
-            }
-
-            ImGui::TreePop();
-        }
-
-        return changed;
-    }
-
-    static bool Render(const char* name, const T& x)
-    {
-        ImGuiID guard{name};
-
-        if (TreeNodeExNoDisable(name)) {
-            template for (constexpr auto member : nsdm_of<T>()) {
-                constexpr auto attns = std::define_static_array(get_all_attns<member, T>());
-                constexpr auto new_config = Config{attns.data(), attns.size()};
-
-                if constexpr (!new_config.HasAttn<Ignore>()) {
-
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
-                    }
-
-                    using element_type = [:remove_const(type_of(member)):];
-                    Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
-                }
-            }
-
-            ImGui::TreePop();
-        }
-
-        return false;
-    }
-};
-
-template <Config config, scalar T>
-struct Renderer<config, T>
-{
-    static bool Render(const char* name, T& value)
-    {
-        // Treat char as a single character string, rather than an integral
-        if constexpr (^^T == ^^char) {
-            char buffer[2] = {value, '\0'};
-            if (ImGui::InputText(name, buffer, sizeof(buffer))) {
-                value = buffer[0];
-                return true;
-            }
-            return false;
-        }
-
-        // Treat long double as a simple double as ImGui does not support it natively
-        else if constexpr (^^T == ^^long double) {
-            double temp = static_cast<double>(value);
-            if (Renderer<config, double>::Render(name, temp)) {
-                value = temp;
-                return true;
-            }
-            return false;
-        }
-
-        else {
-            return RenderScalarN<config, T>(name, &value, 1);
-        }
-    }
-
-    static bool Render(const char* name, const T& value)
-    {
-        return DelegateToNonConst<config>(name, value);
-    }
-};
-
-template <Config config>
-struct Renderer<config, bool>
-{
-    static bool Render(const char* name, bool& value)
-    {
-        return ImGui::Checkbox(name, &value);
-    }
-
-    static bool Render(const char* name, const bool& value)
-    {
-        return DelegateToNonConst<config>(name, value);
-    }
-};
-
-template <Config config, scoped_enum T>
-struct Renderer<config, T>
-{
-    static bool Render(const char* name, T& value)
-    {
-        ImGuiID guard{name};
-        bool changed = false;
-        if constexpr (config.HasAttn<Radio>()) {
-            ImGui::Text("%s", name);
-            template for (constexpr auto e : enums_of<T>()) {
-                constexpr auto enum_name = std::meta::identifier_of(e);
-                ImGui::SameLine();
-                if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
-                    value = [:e:];
-                    changed = true;
-                }
-            }
-        } else {
-            const auto value_name = enum_to_string(value);
-            if (ImGui::BeginCombo(name, value_name)) {
-                template for (constexpr auto e : enums_of<T>()) {
-                    constexpr auto enum_name = std::meta::identifier_of(e);
-                    if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
-                        value = [:e:];
-                        changed = true;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-        }
-        return changed;
-    }
-
-    static bool Render(const char* name, const T& value)
-    {
-        return DelegateToNonConst<config>(name, value);
-    }
-};
-
-template <typename T>
-bool Input(const char* name, T&& value)
-{
-    using Type = [:remove_cvref(^^T):];
-    constexpr auto config = Config{};
-    if constexpr (renderable<config, Type>) {
-        return Renderer<config, Type>::Render(name, std::forward<T>(value));
-    } else {
-        static_assert(false && "not implemented for this type"); 
-    }
-}
 
 }  // namespace ImRefl
 
