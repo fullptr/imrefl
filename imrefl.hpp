@@ -6,6 +6,7 @@
 
 #include <concepts>
 #include <format>
+#include <functional>
 #include <memory>
 #include <meta>
 #include <optional>
@@ -889,6 +890,18 @@ struct Renderer<config, std::weak_ptr<T>>
             return false;
         }
         return Renderer<config, std::shared_ptr<T>>::Render(name, value.lock());
+    }
+};
+
+template <Config config, typename Return>
+struct Renderer<config, std::function<Return()>>
+{
+    static bool Render(const char* name, const std::function<Return()>& fn)
+    {
+        if (ImGui::Button(name)) {
+            if (fn) { fn(); }
+        }
+        return false;
     }
 };
 
