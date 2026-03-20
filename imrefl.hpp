@@ -893,10 +893,10 @@ struct Renderer<config, std::weak_ptr<T>>
     }
 };
 
-template <Config config>
-struct Renderer<config, std::function<void()>>
+template <Config config, typename Return>
+struct Renderer<config, std::function<Return()>>
 {
-    static bool Render(const char* name, const std::function<void()>& fn)
+    static bool Render(const char* name, const std::function<Return()>& fn)
     {
         if (ImGui::Button(name)) {
             if (fn) { fn(); }
