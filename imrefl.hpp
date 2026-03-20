@@ -155,6 +155,36 @@ bool DelegateToNonConst(const char* name, const T& value)
 // discouraged as they may change.
 namespace detail {
 
+// INTERNAL CONCEPTS
+
+template <typename T>
+concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
+
+template <typename T>
+concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
+
+template <typename T>
+concept aggregate = std::meta::is_aggregate_type(^^T);
+
+template<typename T>
+concept can_push_pop_back = requires(T t)
+{
+    { t.emplace_back() };
+    { t.pop_back() };
+};
+
+template<typename T>
+concept can_push_pop_front = requires(T t)
+{
+    { t.emplace_front() };
+    { t.pop_front() };
+};
+
+template <typename T>
+concept tuple_like = requires {
+    std::tuple_size<T>::value;
+};
+
 // INTERNAL REFLECTION HELPERS
 
 template <typename T>
@@ -212,36 +242,6 @@ constexpr const char* enum_to_string(T value)
     }
     return "<unnamed>";
 }
-
-// INTERNAL CONCEPTS
-
-template <typename T>
-concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
-
-template <typename T>
-concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
-
-template <typename T>
-concept aggregate = std::meta::is_aggregate_type(^^T);
-
-template<typename T>
-concept can_push_pop_back = requires(T t)
-{
-    { t.emplace_back() };
-    { t.pop_back() };
-};
-
-template<typename T>
-concept can_push_pop_front = requires(T t)
-{
-    { t.emplace_front() };
-    { t.pop_front() };
-};
-
-template <typename T>
-concept tuple_like = requires {
-    std::tuple_size<T>::value;
-};
 
 // INTERNAL TYPE TO IMGUI SIZE CONVERTERS
 
