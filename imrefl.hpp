@@ -185,7 +185,7 @@ concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
 
-// INTERNAL REFLECTION HELPERS
+// INTERNAL HELPERS
 
 template <typename T>
 consteval auto nsdm_of()
