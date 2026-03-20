@@ -155,6 +155,8 @@ bool DelegateToNonConst(const char* name, const T& value)
 // discouraged as they may change.
 namespace detail {
 
+// INTERNAL REFLECTION HELPERS
+
 template <typename T>
 consteval auto nsdm_of()
 {
@@ -185,6 +187,34 @@ consteval std::vector<std::meta::info> get_all_attns()
     return hints;
 }
 
+consteval auto integer_sequence(std::size_t max)
+{
+    std::vector<std::size_t> values;
+    for (std::size_t i = 0; i != max; ++i) {
+        values.push_back(i);
+    }
+    return std::define_static_array(values);
+}
+
+template <detail::scoped_enum T>
+consteval auto enums_of()
+{
+    return std::define_static_array(std::meta::enumerators_of(^^T));
+}
+
+template <detail::scoped_enum T>
+constexpr const char* enum_to_string(T value)
+{
+    template for (constexpr auto e : enums_of<T>()) {
+        if (value == [:e:]) {
+            return std::meta::identifier_of(e).data();
+        }
+    }
+    return "<unnamed>";
+}
+
+// INTERNAL CONCEPTS
+
 template <typename T>
 concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
 
@@ -213,22 +243,7 @@ concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
 
-template <detail::scoped_enum T>
-consteval auto enums_of()
-{
-    return std::define_static_array(std::meta::enumerators_of(^^T));
-}
-
-template <detail::scoped_enum T>
-constexpr const char* enum_to_string(T value)
-{
-    template for (constexpr auto e : enums_of<T>()) {
-        if (value == [:e:]) {
-            return std::meta::identifier_of(e).data();
-        }
-    }
-    return "<unnamed>";
-}
+// INTERNAL TYPE TO IMGUI SIZE CONVERTERS
 
 template <std::signed_integral T>
 consteval auto num_type()
@@ -264,14 +279,7 @@ consteval auto num_type()
     throw "unknown floating point size";
 }
 
-consteval auto integer_sequence(std::size_t max)
-{
-    std::vector<std::size_t> values;
-    for (std::size_t i = 0; i != max; ++i) {
-        values.push_back(i);
-    }
-    return std::define_static_array(values);
-}
+// INTERNAL RENDERER IMPLEMENTATIONS
 
 template <Config config, typename T>
 bool render_pointer_as_value(const char* name, T* value)
