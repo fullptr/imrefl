@@ -43,6 +43,7 @@ struct player
     std::string_view name = "Link";
 
     std::deque<int> values = {1, 2, 3, 4, 5};
+    const std::shared_ptr<int> p = std::make_shared<int>(10);
 };
 
 int main()

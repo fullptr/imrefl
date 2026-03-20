@@ -124,8 +124,9 @@ struct ImRefl::ExternalAnnotations<player>
 ### Helper functions
 This section is still a work in progress as we work out which functionality is useful to expose to users.
 
-* `DelegateToNonConst` - seen above.
-* ...
+* `ImGuiID` - this is a helper RAII wrapper class for `ImGui::PushID/PopId`.
+* `TreeNodeExNoDisable` - this is a wrapper function for `ImGui::TreeNodeEx`. This is useful for creating a tree node that is still expandable/collapsible when in read-only mode.
+* `DelegateToNonConst` - a helper function for implementing a `const&` render function by calling the `&` version (by making a temporary copy). See the third-party example above.
 
 ## Building the example
 ### Dependencies
