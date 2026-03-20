@@ -110,6 +110,46 @@ inline static constexpr String string {};
 struct Radio {};
 inline static constexpr Radio radio {};
 
+// ============================================================================
+// LIBRARY UTILITY 
+// ============================================================================
+
+// An RAII wrapper for ImGui::PushID/PopID
+struct ImGuiID
+{
+    ImGuiID(const char* id) { ImGui::PushID(id); }
+    ImGuiID(std::size_t id) { ImGui::PushID(id); }
+    ImGuiID(const ImGuiID&) = delete;
+    ImGuiID& operator=(const ImGuiID&) = delete;
+    ImGuiID(ImGuiID&&) = delete;
+    ImGuiID& operator=(ImGuiID&&) = delete;
+    ~ImGuiID() { ImGui::PopID(); }
+};
+
+// A wrapper for TreeNodeEx that allows the tree to be opened and collapsed
+// even in read-only mode. 
+inline bool TreeNodeExNoDisable(const char* label)
+{
+    const int flags = ImGuiTreeNodeFlags_DefaultOpen;
+    const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
+    for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
+    const bool open = ImGui::TreeNodeEx(label, flags);
+    for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
+    return open;
+}
+
+// A helper function that renders a const variable by making a mutable
+// copy and calling the mutable overload for Render.
+template <Config config, typename T>
+bool DelegateToNonConst(const char* name, const T& value)
+{
+    T mutable_value = value;
+    ImGui::BeginDisabled();
+    Renderer<config, T>::Render(name, mutable_value);
+    ImGui::EndDisabled();
+    return false;
+}
+
 // Internal implementation of library; using things in this namespace is
 // discouraged as they may change.
 namespace detail {
@@ -238,50 +278,8 @@ bool render_pointer_as_value(const char* name, T* value)
     }
 }
 
-} // namespace detail
-
-// ============================================================================
-// LIBRARY UTILITY 
-// ============================================================================
-
-// An RAII wrapper for ImGui::PushID/PopID
-struct ImGuiID
-{
-    ImGuiID(const char* id) { ImGui::PushID(id); }
-    ImGuiID(std::size_t id) { ImGui::PushID(id); }
-    ImGuiID(const ImGuiID&) = delete;
-    ImGuiID& operator=(const ImGuiID&) = delete;
-    ImGuiID(ImGuiID&&) = delete;
-    ImGuiID& operator=(ImGuiID&&) = delete;
-    ~ImGuiID() { ImGui::PopID(); }
-};
-
-// A wrapper for TreeNodeEx that allows the tree to be opened and collapsed
-// even in read-only mode. 
-inline bool TreeNodeExNoDisable(const char* label)
-{
-    const int flags = ImGuiTreeNodeFlags_DefaultOpen;
-    const int disabled_levels = ImGui::GetCurrentContext()->DisabledStackSize;
-    for (int i = 0; i != disabled_levels; ++i) { ImGui::EndDisabled(); }
-    const bool open = ImGui::TreeNodeEx(label, flags);
-    for (int i = 0; i != disabled_levels; ++i) { ImGui::BeginDisabled(); }
-    return open;
-}
-
-// A helper function that renders a const variable by making a mutable
-// copy and calling the mutable overload for Render.
-template <Config config, typename T>
-bool DelegateToNonConst(const char* name, const T& value)
-{
-    T mutable_value = value;
-    ImGui::BeginDisabled();
-    Renderer<config, T>::Render(name, mutable_value);
-    ImGui::EndDisabled();
-    return false;
-}
-
 template <Config config, std::ranges::forward_range R>
-bool RenderForwardRange(const char* name, R& range)
+bool render_forward_range(const char* name, R& range)
 {
     constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
     using element_type = std::ranges::range_value_t<R>; 
@@ -352,7 +350,7 @@ bool RenderForwardRange(const char* name, R& range)
 }
 
 template <Config config, std::ranges::forward_range R>
-bool RenderForwardRange(const char* name, const R& range)
+bool render_forward_range(const char* name, const R& range)
 {
     using element_type = std::ranges::range_value_t<R>; 
 
@@ -369,7 +367,7 @@ bool RenderForwardRange(const char* name, const R& range)
 }
 
 template <Config config, detail::scalar T>
-bool RenderScalarN(const char* name, T* val, std::size_t count)
+bool render_scalar_n(const char* name, T* val, std::size_t count)
 {
     static_assert(!(config.HasAttn<Slider>() && config.HasAttn<Drag>()), "too many visual styles given for scalar type");
 
@@ -391,7 +389,7 @@ bool RenderScalarN(const char* name, T* val, std::size_t count)
 }
 
 template <Config config, detail::scalar T>
-bool RenderScalarN(const char* name, const T* val, std::size_t count)
+bool render_scalar_n(const char* name, const T* val, std::size_t count)
 {
     ImGui::BeginGroup();
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
@@ -405,6 +403,8 @@ bool RenderScalarN(const char* name, const T* val, std::size_t count)
     ImGui::EndGroup();
     return false;
 }
+
+} // namespace detail
 
 // ============================================================================
 // RENDERER IMPLEMENTATIONS 
@@ -536,7 +536,7 @@ struct Renderer<config, T>
         }
 
         else {
-            return RenderScalarN<config, T>(name, &value, 1);
+            return detail::render_scalar_n<config, T>(name, &value, 1);
         }
     }
 
@@ -631,10 +631,10 @@ struct Renderer<config, std::span<T>>
 
         // scalar spans can be rendered in a single line if specified.
         if constexpr (detail::scalar<T> && config.HasAttn<InLine>()) {
-            return RenderScalarN<config>(name, arr.data(), arr.size());
+            return detail::render_scalar_n<config>(name, arr.data(), arr.size());
         }
 
-        return RenderForwardRange<config>(name, arr);
+        return detail::render_forward_range<config>(name, arr);
     }
 };
 
@@ -665,10 +665,10 @@ struct Renderer<config, std::span<const T>>
 
         // scalar spans can be rendered in a single line if specified.
         if constexpr (detail::scalar<T> && config.HasAttn<InLine>()) {
-            return RenderScalarN<config>(name, arr.data(), arr.size());
+            return detail::render_scalar_n<config>(name, arr.data(), arr.size());
         }
 
-        return RenderForwardRange<config>(name, arr);
+        return detail::render_forward_range<config>(name, arr);
     }
 };
 
@@ -852,12 +852,12 @@ struct Renderer<config, R>
 {
     static bool Render(const char* name, R& range)
     {
-        return RenderForwardRange<config>(name, range);
+        return detail::render_forward_range<config>(name, range);
     }
 
     static bool Render(const char* name, const R& range)
     {
-        return RenderForwardRange<config>(name, range);
+        return detail::render_forward_range<config>(name, range);
     }
 };
 
