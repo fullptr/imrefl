@@ -243,40 +243,32 @@ constexpr const char* enum_to_string(T value)
     return "<unnamed>";
 }
 
-// INTERNAL TYPE TO IMGUI SIZE CONVERTERS
-
-template <std::signed_integral T>
+template <scalar T>
 consteval auto num_type()
 {
-    switch (sizeof(T)) {
-        case 1: return ImGuiDataType_S8;
-        case 2: return ImGuiDataType_S16;
-        case 4: return ImGuiDataType_S32;
-        case 8: return ImGuiDataType_S64;
+    if constexpr (std::signed_integral<T>) {
+        switch (sizeof(T)) {
+            case 1: return ImGuiDataType_S8;
+            case 2: return ImGuiDataType_S16;
+            case 4: return ImGuiDataType_S32;
+            case 8: return ImGuiDataType_S64;
+        }
     }
-    throw "unknown signed integral size";
-}
-
-template <std::unsigned_integral T>
-consteval auto num_type()
-{
-    switch (sizeof(T)) {
-        case 1: return ImGuiDataType_U8;
-        case 2: return ImGuiDataType_U16;
-        case 4: return ImGuiDataType_U32;
-        case 8: return ImGuiDataType_U64;
+    else if constexpr (std::unsigned_integral<T>) {
+        switch (sizeof(T)) {
+            case 1: return ImGuiDataType_U8;
+            case 2: return ImGuiDataType_U16;
+            case 4: return ImGuiDataType_U32;
+            case 8: return ImGuiDataType_U64;
+        }
     }
-    throw "unknown unsigned integral size";
-}
-
-template <std::floating_point T>
-consteval auto num_type()
-{
-    switch (sizeof(T)) {
-        case 4: return ImGuiDataType_Float;
-        case 8: return ImGuiDataType_Double;
+    else if constexpr (std::floating_point<T>) {
+        switch (sizeof(T)) {
+            case 4: return ImGuiDataType_Float;
+            case 8: return ImGuiDataType_Double;
+        }
     }
-    throw "unknown floating point size";
+    throw "unknown scalar type";
 }
 
 // INTERNAL RENDERER IMPLEMENTATIONS
