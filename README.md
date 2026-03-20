@@ -40,9 +40,10 @@ That's it! No macros or other setup needed!
     * `std::deque<T>`.
     * `std::list<T>`.
     * `std::forward_list<T>`.
-
 * `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
     * Acts the same as `T*`.
+* `std::function<void()>`
+    * Rendered as a button. Pressing the button calls the function.
 
 #### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
