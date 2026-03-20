@@ -735,6 +735,39 @@ struct Renderer<config, std::pair<L, R>>
     }
 };
 
+template <Config config, typename... Ts>
+struct Renderer<config, std::tuple<Ts...>>
+{
+    static bool Render(const char* name, std::tuple<Ts...>& value)
+    {
+        ImGuiID guard{name};
+        bool changed = false;
+
+        ImGui::Text("%s", name);
+        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
+            ImGuiID guard{index};
+            changed = Renderer<config, Ts...[index]>::Render(std::to_string(index).c_str(), std::get<index>(value)) || changed;
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::tuple<Ts...>& value)
+    {
+        ImGuiID guard{name};
+        ImGui::BeginDisabled();
+
+        ImGui::Text("%s", name);
+        template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
+            ImGuiID guard{index};
+            Renderer<config, Ts...[index]>::Render(std::to_string(index).c_str(), std::get<index>(value));
+        }
+
+        ImGui::EndDisabled();
+        return false;
+    }
+};
+
 template <Config config, typename T>
 struct Renderer<config, std::optional<T>>
 {
