@@ -24,23 +24,24 @@ That's it! No macros or other setup needed!
     * `bool` is rendered as a checkbox.
     * `char` is treated as a character rather than an 8 bit integer. 
     * `long double` is treated as a `double` as it is not supported by ImGui out of the box.
-* `T*`
+* `T*`.
     * Shows the pointed-at value (or "nullptr").
     * The value can be changed, but the pointer cannot be reassigned.
-* `T[N]` (C-style arrays)
-* `std::array<T, N>`
-* `std::span<T>`
+* `T[N]` (C-style arrays).
+* `std::array<T, N>`.
+* `std::span<T>`.
 * `std::string`.
+* `std::string_view`.
 * `std::pair<L, R>`.
 * `std::optional<T>`.
 * `std::variant<Ts...>`.
 * All containers satisfying `std::ranges::forward_range`, notably:
-    * `std::vector<T>`
-    * `std::deque<T>`
-    * `std::list<T>`
-    * `std::forward_list<T>`
+    * `std::vector<T>`.
+    * `std::deque<T>`.
+    * `std::list<T>`.
+    * `std::forward_list<T>`.
 
-* `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`
+* `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
     * Acts the same as `T*`.
 
 #### `imrefl_glm.hpp`
