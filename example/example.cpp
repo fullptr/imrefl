@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <chrono>
+#include <functional>
 #include <vector>
 #include <vector>
 
@@ -44,6 +45,8 @@ struct player
 
     std::deque<int> values = {1, 2, 3, 4, 5};
     const std::shared_ptr<int> p = std::make_shared<int>(10);
+
+    std::function<void()> callback = []() { std::println("called!"); };
 };
 
 int main()
