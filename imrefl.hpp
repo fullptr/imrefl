@@ -181,6 +181,12 @@ concept can_push_pop_front = requires(T t)
 };
 
 template <typename T>
+concept can_erase_elements = requires(T t, typename T::const_iterator it)
+{
+    { t.erase(it) } -> std::same_as<typename T::const_iterator>;
+};
+
+template <typename T>
 concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
@@ -307,7 +313,8 @@ bool render_forward_range(const char* name, R& range)
         }
 
         size_t i = 0;
-        for (auto& element : range) {
+        for (auto it = range.begin(); it != range.end();) {
+            auto& element = *it;
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
 
@@ -331,6 +338,18 @@ bool render_forward_range(const char* name, R& range)
             }
             else {
                 changed = Renderer<config, element_type>::Render(index_name.c_str(), element) || changed;
+            }
+
+            if constexpr (detail::can_erase_elements<R>) {
+                ImGui::SameLine();
+                const float button_size = ImGui::GetFrameHeight();
+                if (ImGui::Button("-", {button_size, button_size})) {
+                    it = range.erase(it);
+                } else {
+                    ++it;
+                }
+            } else {
+                ++it;
             }
             ++i;
         }
