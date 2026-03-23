@@ -46,6 +46,7 @@ That's it! No macros or other setup needed!
 * `std::function<Return()>`
     * Rendered as a button. Pressing the button calls the function.
     * The return value of type `Return` is discarded.
+* `std::bitset`.
 
 #### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.

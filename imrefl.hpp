@@ -15,6 +15,7 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <bitset>
 
 namespace ImRefl {
 
@@ -946,6 +947,36 @@ struct Renderer<config, std::function<Return()>>
     {
         if (ImGui::Button(name)) {
             if (fn) { fn(); }
+        }
+        return false;
+    }
+};
+
+template <Config config, std::size_t Nb>
+struct Renderer<config, std::bitset<Nb>>
+{
+    static bool Render(const char* name, std::bitset<Nb>& value)
+    {
+        ImGui::Text("%s", name);
+
+        bool changed = false;
+        bool proxy;
+        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+            proxy = value[i];
+            if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
+            changed = Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
+            value[i] = proxy;
+        }
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::bitset<Nb>& value)
+    {
+        ImGui::Text("%s", name);
+
+        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+            if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
+            Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
         }
         return false;
     }
