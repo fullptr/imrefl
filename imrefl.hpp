@@ -964,7 +964,7 @@ struct Renderer<config, std::bitset<Nb>>
         template for (constexpr auto i : detail::integer_sequence(Nb)) {
             proxy = value[i];
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
+            changed = Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
             value[i] = proxy;
         }
         return changed;
