@@ -33,20 +33,12 @@ enum class weapon
     axe
 };
 
-struct Vec3Compare {
-    bool operator()(const glm::vec3& a, const glm::vec3& b) const {
-        if (a.x != b.x) return a.x < b.x;
-        if (a.y != b.y) return a.y < b.y;
-        return a.z < b.z;
-    }
-};
-
 struct player
 {
-    [[=ImRefl::color]]
-    std::set<glm::vec3, Vec3Compare> values1 = {};
-
-    std::list<int> foo = {};
+    std::set<weapon> weapons;
+    std::unordered_set<int> counts;
+    std::multiset<float> floats;
+    std::unordered_multiset<std::string> names;
 };
 
 int main()
