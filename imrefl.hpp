@@ -356,8 +356,10 @@ bool render_forward_range(const char* name, R& range)
 
             if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
                 changed = Renderer<config, element_type>::Render("", element) || changed;
+
                 ImGui::SameLine();
-                ImGui::Selectable(index_name.c_str());
+                const float selectableWidth = ImGui::CalcTextSize(index_name.c_str()).x;
+                ImGui::Selectable(index_name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(selectableWidth, 0));
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
                     ImGui::EndDragDropSource();
