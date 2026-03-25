@@ -35,12 +35,7 @@ enum class weapon
 
 struct player
 {
-    std::set<weapon> weapons;
-    std::unordered_set<int> counts;
-    std::multiset<float> floats;
-    std::unordered_multiset<std::string> names;
-
-    std::vector<int> d = {1, 2, 3, 4};
+    std::source_location loc = std::source_location::current();
 };
 
 int main()

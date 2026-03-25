@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <bitset>
 #include <concepts>
 #include <format>
 #include <functional>
@@ -11,11 +12,11 @@
 #include <meta>
 #include <optional>
 #include <ranges>
+#include <source_location>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <variant>
-#include <bitset>
 
 namespace ImRefl {
 
@@ -1013,17 +1014,17 @@ struct Renderer<config, std::function<Return()>>
     }
 };
 
-template <Config config, std::size_t Nb>
-struct Renderer<config, std::bitset<Nb>>
+template <Config config, std::size_t N>
+struct Renderer<config, std::bitset<N>>
 {
-    static bool Render(const char* name, std::bitset<Nb>& value)
+    static bool Render(const char* name, std::bitset<N>& value)
     {
         ImGuiID id{name};
         ImGui::Text("%s", name);
 
         bool changed = false;
         bool proxy;
-        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+        template for (constexpr auto i : detail::integer_sequence(N)) {
             proxy = value[i];
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
             changed = Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
@@ -1032,15 +1033,31 @@ struct Renderer<config, std::bitset<Nb>>
         return changed;
     }
 
-    static bool Render(const char* name, const std::bitset<Nb>& value)
+    static bool Render(const char* name, const std::bitset<N>& value)
     {
         ImGuiID id{name};
         ImGui::Text("%s", name);
 
-        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+        template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
             Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
         }
+        return false;
+    }
+};
+
+template <Config config>
+struct Renderer<config, std::source_location>
+{
+    static bool Render(const char* name, const std::source_location& value)
+    {
+        ImGui::Text(
+            "%s: %s(%u:%u): '%s'",
+            name,
+            value.file_name(),
+            value.line(),
+            value.column(),
+            value.function_name());
         return false;
     }
 };
