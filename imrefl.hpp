@@ -957,6 +957,7 @@ struct Renderer<config, std::bitset<Nb>>
 {
     static bool Render(const char* name, std::bitset<Nb>& value)
     {
+        ImGuiID id{name};
         ImGui::Text("%s", name);
 
         bool changed = false;
@@ -972,6 +973,7 @@ struct Renderer<config, std::bitset<Nb>>
 
     static bool Render(const char* name, const std::bitset<Nb>& value)
     {
+        ImGuiID id{name};
         ImGui::Text("%s", name);
 
         template for (constexpr auto i : detail::integer_sequence(Nb)) {
