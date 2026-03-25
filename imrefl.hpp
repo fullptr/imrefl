@@ -150,19 +150,23 @@ bool DelegateToNonConst(const char* name, const T& value)
     return false;
 }
 
-// TODO: Constrain this function more
+// Stores an object of type T in static storage and implements a popup
+// box for modifying the value. Returns a std::optional<T> containing the
+// produced value when the user clicks the Add button.
 template <Config config, typename T>
 std::optional<T> GetNewValue()
 {
+    const float button_size = ImGui::GetFrameHeight();
+
     static T value {};
-    if (ImGui::Button("Insert")) {
+    if (ImGui::Button("+", {button_size, button_size})) {
         ImGui::OpenPopup("insert_popup");
     }
 
     auto return_val = std::optional<T>{};
     if (ImGui::BeginPopup("insert_popup")) {
         Renderer<config, T>::Render("[new value]", value);
-        if (ImGui::Button("add")) {
+        if (ImGui::Button("Add")) {
             ImGui::CloseCurrentPopup();
             return_val = value;        
             value = {};
@@ -202,7 +206,13 @@ concept can_push_pop_front = requires(T t)
 };
 
 template <typename T>
-concept can_erase_elements = requires(T t, typename T::const_iterator it)
+concept can_insert = requires(T t, typename T::value_type value)
+{
+    { t.insert(value) } ;
+};
+
+template <typename T>
+concept can_erase = requires(T t, typename T::const_iterator it)
 {
     { t.erase(it) } -> std::same_as<typename T::const_iterator>;
 };
@@ -361,7 +371,7 @@ bool render_forward_range(const char* name, R& range)
                 changed = Renderer<config, element_type>::Render(index_name.c_str(), element) || changed;
             }
 
-            if constexpr (detail::can_erase_elements<R>) {
+            if constexpr (detail::can_erase<R>) {
                 ImGui::SameLine();
                 const float button_size = ImGui::GetFrameHeight();
                 if (ImGui::Button("-", {button_size, button_size})) {
@@ -375,17 +385,25 @@ bool render_forward_range(const char* name, R& range)
             ++i;
         }
 
-        if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
-            if (!detail::can_push_pop_front<R> || i > 0) {
-                ImGuiID id{"back"};
-                const float button_size = ImGui::GetFrameHeight();
-                const ImGuiStyle& style = ImGui::GetStyle();
-                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                    range.pop_back();
+        if constexpr (!config.HasAttn<NonResizable>()) {
+            if constexpr (detail::can_push_pop_back<R>) {
+                if (!detail::can_push_pop_front<R> || i > 0) {
+                    ImGuiID id{"back"};
+                    const float button_size = ImGui::GetFrameHeight();
+                    const ImGuiStyle& style = ImGui::GetStyle();
+                    if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+                        range.pop_back();
+                    }
+                    ImGui::SameLine(0, style.ItemInnerSpacing.x);
+                    if (ImGui::Button("+", {button_size, button_size})) {
+                        range.emplace_back();
+                    }
                 }
-                ImGui::SameLine(0, style.ItemInnerSpacing.x);
-                if (ImGui::Button("+", {button_size, button_size})) {
-                    range.emplace_back();
+            }
+            else if constexpr (detail::can_insert<R>) {
+                if (auto new_val = GetNewValue<config, element_type>()) {
+                    range.insert(*new_val);
+                    changed = true;
                 }
             }
         }
@@ -1019,26 +1037,6 @@ struct Renderer<config, std::bitset<Nb>>
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
             Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
         }
-        return false;
-    }
-};
-
-template <Config config, typename T>
-struct Renderer<config, std::set<T>>
-{
-    static bool Render(const char* name, std::set<T>& value)
-    {
-        ImGuiID id{name};
-        const auto changed = detail::render_forward_range<config>(name, value);
-        if (auto new_val = GetNewValue<config, T>()) {
-            value.insert(*new_val);
-            return true;
-        }
-        return changed;
-    }
-
-    static bool Render(const char* name, const std::set<T>& value)
-    {
         return false;
     }
 };
