@@ -359,7 +359,7 @@ bool render_forward_range(const char* name, R& range)
 
                 ImGui::SameLine();
                 const float selectableWidth = ImGui::CalcTextSize(index_name.c_str()).x;
-                ImGui::Selectable(index_name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(selectableWidth, 0));
+                ImGui::Selectable(index_name.c_str(), false, ImGuiSelectableFlags_None, {selectableWidth, 0});
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
                     ImGui::EndDragDropSource();
@@ -866,7 +866,7 @@ struct Renderer<config, std::optional<T>>
                 value = {};     // Delay this so as not to pass invalid memory to Render
             }
         } else {
-            if (ImGui::Button("Add", ImVec2(ImGui::CalcItemWidth(), ImGui::GetFrameHeight()))) {
+            if (ImGui::Button("Add", {ImGui::CalcItemWidth(), ImGui::GetFrameHeight()})) {
                 value.emplace();
                 changed = true;
             }
