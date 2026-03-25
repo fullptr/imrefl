@@ -15,6 +15,7 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <bitset>
 
 namespace ImRefl {
 
@@ -89,9 +90,7 @@ struct NonResizable {};
 inline static constexpr NonResizable non_resizable {};
 
 struct Separator { const char* title; };
-template <std::size_t N>
-constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
-constexpr Separator separator() { return separator(""); }
+consteval Separator separator(std::string_view title = "") { return {std::define_static_string(title)}; }
 
 struct Color {};
 inline static constexpr Color color {};
@@ -965,6 +964,38 @@ struct Renderer<config, std::function<Return()>>
     {
         if (ImGui::Button(name)) {
             if (fn) { fn(); }
+        }
+        return false;
+    }
+};
+
+template <Config config, std::size_t Nb>
+struct Renderer<config, std::bitset<Nb>>
+{
+    static bool Render(const char* name, std::bitset<Nb>& value)
+    {
+        ImGuiID id{name};
+        ImGui::Text("%s", name);
+
+        bool changed = false;
+        bool proxy;
+        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+            proxy = value[i];
+            if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
+            changed = Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
+            value[i] = proxy;
+        }
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::bitset<Nb>& value)
+    {
+        ImGuiID id{name};
+        ImGui::Text("%s", name);
+
+        template for (constexpr auto i : detail::integer_sequence(Nb)) {
+            if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
+            Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
         }
         return false;
     }
