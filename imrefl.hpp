@@ -90,9 +90,7 @@ struct NonResizable {};
 inline static constexpr NonResizable non_resizable {};
 
 struct Separator { const char* title; };
-template <std::size_t N>
-constexpr Separator separator(const char (&title)[N]) { return { std::define_static_string(title) }; }
-constexpr Separator separator() { return separator(""); }
+consteval Separator separator(std::string_view title = "") { return {std::define_static_string(title)}; }
 
 struct Color {};
 inline static constexpr Color color {};
