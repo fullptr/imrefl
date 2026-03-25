@@ -180,6 +180,18 @@ concept can_push_pop_front = requires(T t)
 };
 
 template <typename T>
+concept can_insert = requires(T t, typename T::value_type value)
+{
+    { t.insert(value) };
+};
+
+template <typename T>
+concept can_erase = requires(T t, typename T::const_iterator it)
+{
+    { t.erase(it) } -> std::convertible_to<typename T::const_iterator>;
+};
+
+template <typename T>
 concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
@@ -270,6 +282,39 @@ consteval auto num_type()
     throw "unknown scalar type";
 }
 
+// Used for the + and - buttons. Only permits a single character
+// since the button is fixed size.
+bool square_button(char symbol)
+{
+    const char buf[2] = {symbol, '\0'};
+    const float button_size = ImGui::GetFrameHeight();
+    return ImGui::Button(buf, {button_size, button_size});
+}
+
+// Stores an object of type T in static storage and implements a popup
+// box for modifying the value. Returns a std::optional<T> containing the
+// produced value when the user clicks the Add button.
+template <Config config, typename T>
+std::optional<T> get_new_value()
+{
+    static T value {};
+    if (square_button('+')) {
+        ImGui::OpenPopup("insert_popup");
+    }
+
+    auto return_val = std::optional<T>{};
+    if (ImGui::BeginPopup("insert_popup")) {
+        Renderer<config, T>::Render("[new value]", value);
+        if (ImGui::Button("Add")) {
+            ImGui::CloseCurrentPopup();
+            return_val = value;        
+            value = {};
+        }
+        ImGui::EndPopup();
+    }
+    return return_val;
+}
+
 // INTERNAL RENDERER IMPLEMENTATIONS
 
 template <Config config, typename T>
@@ -294,26 +339,27 @@ bool render_forward_range(const char* name, R& range)
     if (TreeNodeExNoDisable(name)) {
         if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
             ImGuiID id{"front"};
-            const float button_size = ImGui::GetFrameHeight();
-            const ImGuiStyle& style = ImGui::GetStyle();
-            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+            if (square_button('-') && !range.empty()) {
                 range.pop_front();
             }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("+", {button_size, button_size})) {
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (square_button('+')) {
                 range.emplace_front();
             }
         }
 
         size_t i = 0;
-        for (auto& element : range) {
+        for (auto it = range.begin(); it != range.end();) {
+            auto& element = *it;
             ImGuiID id(i);
             const std::string index_name = std::format("[{}]", i);
 
             if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
                 changed = Renderer<config, element_type>::Render("", element) || changed;
+
                 ImGui::SameLine();
-                ImGui::Selectable(index_name.c_str());
+                const float selectableWidth = ImGui::CalcTextSize(index_name.c_str()).x;
+                ImGui::Selectable(index_name.c_str(), false, ImGuiSelectableFlags_None, {selectableWidth, 0});
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
                     ImGui::EndDragDropSource();
@@ -331,20 +377,37 @@ bool render_forward_range(const char* name, R& range)
             else {
                 changed = Renderer<config, element_type>::Render(index_name.c_str(), element) || changed;
             }
+
+            if constexpr (detail::can_erase<R>) {
+                ImGui::SameLine();
+                if (square_button('-')) {
+                    it = range.erase(it);
+                } else {
+                    ++it;
+                }
+            } else {
+                ++it;
+            }
             ++i;
         }
 
-        if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
-            if (!detail::can_push_pop_front<R> || i > 0) {
-                ImGuiID id{"back"};
-                const float button_size = ImGui::GetFrameHeight();
-                const ImGuiStyle& style = ImGui::GetStyle();
-                if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                    range.pop_back();
+        if constexpr (!config.HasAttn<NonResizable>()) {
+            if constexpr (detail::can_push_pop_back<R>) {
+                if (!detail::can_push_pop_front<R> || i > 0) {
+                    ImGuiID id{"back"};
+                        if (square_button('-') && !range.empty()) {
+                            range.pop_back();
+                        }
+                        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                        if (square_button('+')) {
+                            range.emplace_back();
+                        }
                 }
-                ImGui::SameLine(0, style.ItemInnerSpacing.x);
-                if (ImGui::Button("+", {button_size, button_size})) {
-                    range.emplace_back();
+            }
+            else if constexpr (detail::can_insert<R>) {
+                if (auto new_val = get_new_value<config, element_type>()) {
+                    range.insert(*new_val);
+                    changed = true;
                 }
             }
         }
@@ -803,7 +866,7 @@ struct Renderer<config, std::optional<T>>
                 value = {};     // Delay this so as not to pass invalid memory to Render
             }
         } else {
-            if (ImGui::Button("Add", ImVec2(ImGui::CalcItemWidth(), ImGui::GetFrameHeight()))) {
+            if (ImGui::Button("Add", {ImGui::CalcItemWidth(), ImGui::GetFrameHeight()})) {
                 value.emplace();
                 changed = true;
             }

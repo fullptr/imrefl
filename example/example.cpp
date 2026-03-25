@@ -8,6 +8,8 @@
 #include <string>
 #include <chrono>
 #include <functional>
+#include <unordered_set>
+#include <map>
 #include <vector>
 #include <vector>
 
@@ -33,8 +35,12 @@ enum class weapon
 
 struct player
 {
-    std::tuple<int, float, std::string> data_tuple = {};
-    std::pair<int, float> data_pair = {};
+    std::set<weapon> weapons;
+    std::unordered_set<int> counts;
+    std::multiset<float> floats;
+    std::unordered_multiset<std::string> names;
+
+    std::vector<int> d = {1, 2, 3, 4};
 };
 
 int main()
