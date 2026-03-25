@@ -150,6 +150,28 @@ bool DelegateToNonConst(const char* name, const T& value)
     return false;
 }
 
+// TODO: Constrain this function more
+template <Config config, typename T>
+std::optional<T> GetNewValue()
+{
+    static T value {};
+    if (ImGui::Button("Insert")) {
+        ImGui::OpenPopup("insert_popup");
+    }
+
+    auto return_val = std::optional<T>{};
+    if (ImGui::BeginPopup("insert_popup")) {
+        Renderer<config, T>::Render("[new value]", value);
+        if (ImGui::Button("add")) {
+            ImGui::CloseCurrentPopup();
+            return_val = value;        
+            value = {};
+        }
+        ImGui::EndPopup();
+    }
+    return return_val;
+}
+
 // Internal implementation of library; using things in this namespace is
 // discouraged as they may change.
 namespace detail {
@@ -997,6 +1019,26 @@ struct Renderer<config, std::bitset<Nb>>
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
             Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
         }
+        return false;
+    }
+};
+
+template <Config config, typename T>
+struct Renderer<config, std::set<T>>
+{
+    static bool Render(const char* name, std::set<T>& value)
+    {
+        ImGuiID id{name};
+        const auto changed = detail::render_forward_range<config>(name, value);
+        if (auto new_val = GetNewValue<config, T>()) {
+            value.insert(*new_val);
+            return true;
+        }
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::set<T>& value)
+    {
         return false;
     }
 };

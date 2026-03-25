@@ -34,9 +34,8 @@ enum class weapon
 
 struct player
 {
-    std::set<int> ordered = {1, 2, 3, 4};
-    std::unordered_set<int> unordered = {1, 2, 3, 4};
-    std::list<int> vec = {1, 2, 3, 4, 5, 6};
+    std::set<int> values1 = {1, 2, 3, 4, 5};
+    std::set<float> values2 = {1, 2, 3, 4, 5};
 };
 
 int main()
