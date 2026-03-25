@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <unordered_set>
+#include <map>
 #include <vector>
 #include <vector>
 
@@ -32,10 +33,20 @@ enum class weapon
     axe
 };
 
+struct Vec3Compare {
+    bool operator()(const glm::vec3& a, const glm::vec3& b) const {
+        if (a.x != b.x) return a.x < b.x;
+        if (a.y != b.y) return a.y < b.y;
+        return a.z < b.z;
+    }
+};
+
 struct player
 {
-    std::set<int> values1 = {1, 2, 3, 4, 5};
-    std::set<float> values2 = {1, 2, 3, 4, 5};
+    [[=ImRefl::color]]
+    std::set<glm::vec3, Vec3Compare> values1 = {};
+
+    std::list<int> foo = {};
 };
 
 int main()

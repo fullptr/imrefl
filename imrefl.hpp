@@ -150,32 +150,6 @@ bool DelegateToNonConst(const char* name, const T& value)
     return false;
 }
 
-// Stores an object of type T in static storage and implements a popup
-// box for modifying the value. Returns a std::optional<T> containing the
-// produced value when the user clicks the Add button.
-template <Config config, typename T>
-std::optional<T> GetNewValue()
-{
-    const float button_size = ImGui::GetFrameHeight();
-
-    static T value {};
-    if (ImGui::Button("+", {button_size, button_size})) {
-        ImGui::OpenPopup("insert_popup");
-    }
-
-    auto return_val = std::optional<T>{};
-    if (ImGui::BeginPopup("insert_popup")) {
-        Renderer<config, T>::Render("[new value]", value);
-        if (ImGui::Button("Add")) {
-            ImGui::CloseCurrentPopup();
-            return_val = value;        
-            value = {};
-        }
-        ImGui::EndPopup();
-    }
-    return return_val;
-}
-
 // Internal implementation of library; using things in this namespace is
 // discouraged as they may change.
 namespace detail {
@@ -208,13 +182,13 @@ concept can_push_pop_front = requires(T t)
 template <typename T>
 concept can_insert = requires(T t, typename T::value_type value)
 {
-    { t.insert(value) } ;
+    { t.insert(value) };
 };
 
 template <typename T>
 concept can_erase = requires(T t, typename T::const_iterator it)
 {
-    { t.erase(it) } -> std::same_as<typename T::const_iterator>;
+    { t.erase(it) } -> std::convertible_to<typename T::const_iterator>;
 };
 
 template <typename T>
@@ -308,6 +282,39 @@ consteval auto num_type()
     throw "unknown scalar type";
 }
 
+// Used for the + and - buttons. Only permits a single character
+// since the button is fixed size.
+bool square_button(char symbol)
+{
+    const char buf[2] = {symbol, '\0'};
+    const float button_size = ImGui::GetFrameHeight();
+    return ImGui::Button(buf, {button_size, button_size});
+}
+
+// Stores an object of type T in static storage and implements a popup
+// box for modifying the value. Returns a std::optional<T> containing the
+// produced value when the user clicks the Add button.
+template <Config config, typename T>
+std::optional<T> get_new_value()
+{
+    static T value {};
+    if (square_button('+')) {
+        ImGui::OpenPopup("insert_popup");
+    }
+
+    auto return_val = std::optional<T>{};
+    if (ImGui::BeginPopup("insert_popup")) {
+        Renderer<config, T>::Render("[new value]", value);
+        if (ImGui::Button("Add")) {
+            ImGui::CloseCurrentPopup();
+            return_val = value;        
+            value = {};
+        }
+        ImGui::EndPopup();
+    }
+    return return_val;
+}
+
 // INTERNAL RENDERER IMPLEMENTATIONS
 
 template <Config config, typename T>
@@ -332,13 +339,11 @@ bool render_forward_range(const char* name, R& range)
     if (TreeNodeExNoDisable(name)) {
         if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
             ImGuiID id{"front"};
-            const float button_size = ImGui::GetFrameHeight();
-            const ImGuiStyle& style = ImGui::GetStyle();
-            if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
+            if (square_button('-') && !range.empty()) {
                 range.pop_front();
             }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::Button("+", {button_size, button_size})) {
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (square_button('+')) {
                 range.emplace_front();
             }
         }
@@ -373,8 +378,7 @@ bool render_forward_range(const char* name, R& range)
 
             if constexpr (detail::can_erase<R>) {
                 ImGui::SameLine();
-                const float button_size = ImGui::GetFrameHeight();
-                if (ImGui::Button("-", {button_size, button_size})) {
+                if (square_button('-')) {
                     it = range.erase(it);
                 } else {
                     ++it;
@@ -389,19 +393,17 @@ bool render_forward_range(const char* name, R& range)
             if constexpr (detail::can_push_pop_back<R>) {
                 if (!detail::can_push_pop_front<R> || i > 0) {
                     ImGuiID id{"back"};
-                    const float button_size = ImGui::GetFrameHeight();
-                    const ImGuiStyle& style = ImGui::GetStyle();
-                    if (ImGui::Button("-", {button_size, button_size}) && !range.empty()) {
-                        range.pop_back();
-                    }
-                    ImGui::SameLine(0, style.ItemInnerSpacing.x);
-                    if (ImGui::Button("+", {button_size, button_size})) {
-                        range.emplace_back();
-                    }
+                        if (square_button('-') && !range.empty()) {
+                            range.pop_back();
+                        }
+                        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                        if (square_button('+')) {
+                            range.emplace_back();
+                        }
                 }
             }
             else if constexpr (detail::can_insert<R>) {
-                if (auto new_val = GetNewValue<config, element_type>()) {
+                if (auto new_val = get_new_value<config, element_type>()) {
                     range.insert(*new_val);
                     changed = true;
                 }
