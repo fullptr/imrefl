@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include <map>
 #include <vector>
-#include <vector>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -35,7 +34,10 @@ enum class weapon
 
 struct player
 {
-    std::map<int, int> d = {{1, 2}, {3, 4}};
+    std::set<int>                a = {1, 2, 3, 4};
+    std::unordered_set<int>      b = {1, 2, 3, 4};
+    std::multiset<int>           c = {1, 2, 3, 4};
+    std::unordered_multiset<int> d = {1, 2, 3, 4};
 };
 
 int main()

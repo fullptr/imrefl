@@ -210,6 +210,12 @@ concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
 
+template <typename T>
+concept is_mapping_type = requires {
+    typename T::key_type;
+    typename T::mapped_type;
+};
+
 // INTERNAL HELPERS
 
 template <typename T>
@@ -318,7 +324,7 @@ std::optional<T> get_new_value()
 
     auto return_val = std::optional<T>{};
     if (ImGui::BeginPopup("insert_popup")) {
-        Renderer<config, T>::Render("[new value]", value);
+        Renderer<config, T>::Render("[new key]", value);
         if (ImGui::Button("Add")) {
             ImGui::CloseCurrentPopup();
             return_val = value;        
@@ -405,6 +411,8 @@ bool render_forward_range(const char* name, R& range)
             ++i;
         }
 
+        // TODO: This needs to be made a bit more general. Currently it does not support push_back
+        // for types where the element type is not copy assignable, for example
         if constexpr (!config.HasAttn<NonResizable>()) {
             if constexpr (detail::can_push_pop_back<R>) {
                 if (!detail::can_push_pop_front<R> || i > 0) {
@@ -418,10 +426,23 @@ bool render_forward_range(const char* name, R& range)
                         }
                 }
             }
-            else if constexpr (detail::can_insert<R> && std::is_copy_assignable_v<element_type>) {
-                if (auto new_val = get_new_value<config, element_type>()) {
-                    range.insert(*new_val);
-                    changed = true;
+
+            // TODO: Clean up the type trait use here; not everything is checked
+            else if constexpr (detail::can_insert<R>) {
+                if constexpr (std::is_copy_assignable_v<element_type>) {
+                    if (auto new_val = get_new_value<config, element_type>()) {
+                        range.emplace(*new_val);
+                        changed = true; // not necessarily true if the key already exists
+                    }
+                }
+
+                else if constexpr (is_mapping_type<R>) {
+                    using Key = typename R::key_type;
+                    using Value = typename R::mapped_type;
+                    if (auto new_val = get_new_value<config, Key>()) {
+                        range.emplace(*new_val, Value{});
+                        changed = true; // not necessarily true if the key already exists
+                    }
                 }
             }
         }
