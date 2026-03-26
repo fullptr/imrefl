@@ -16,6 +16,7 @@
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,6 +59,11 @@ struct Renderer
 {
     static_assert(sizeof(T) == 0, "No Renderer implementation for type T");
 };
+
+// Strips const out of the type automatically, this prevents ambiguous overloads
+// because Render(const T&) and Render(T&) are the same signature when T is const
+template <Config config, typename T>
+struct Renderer<config, const T> : Renderer<config, T> {};
 
 // Specialize this struct for different types by giving it fields
 // with names matching fields on the type T. Annotations on fields of
@@ -406,7 +412,7 @@ bool render_forward_range(const char* name, R& range)
                         }
                 }
             }
-            else if constexpr (detail::can_insert<R>) {
+            else if constexpr (detail::can_insert<R> && std::is_copy_assignable_v<element_type>) {
                 if (auto new_val = get_new_value<config, element_type>()) {
                     range.insert(*new_val);
                     changed = true;
