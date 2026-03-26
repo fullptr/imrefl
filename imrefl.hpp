@@ -1086,11 +1086,7 @@ struct Renderer<config, std::complex<T>>
 
     static bool Render(const char* name, const std::complex<T>& value)
     {
-        ImGuiID id{name};
-        ImGui::Text("%s", name);
-        Renderer<config, T>::Render("Real", value.real());
-        Renderer<config, T>::Render("Imag", value.imag());
-        return false;
+        return DelegateToNonConst<config>(name, value);
     }
 };
 
