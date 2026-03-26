@@ -34,10 +34,7 @@ enum class weapon
 
 struct player
 {
-    std::set<int>                a = {1, 2, 3, 4};
-    std::unordered_set<int>      b = {1, 2, 3, 4};
-    std::multiset<int>           c = {1, 2, 3, 4};
-    std::unordered_multiset<int> d = {1, 2, 3, 4};
+    std::unordered_map<weapon, int> weapon_counts;
 };
 
 int main()
