@@ -59,6 +59,11 @@ struct Renderer
     static_assert(sizeof(T) == 0, "No Renderer implementation for type T");
 };
 
+// Strips const out of the type automatically, this prevents ambiguous overloads
+// because Render(const T&) and Render(T&) are the same signature when T is const
+template <Config config, typename T>
+struct Renderer<config, const T> : Renderer<config, T> {};
+
 // Specialize this struct for different types by giving it fields
 // with names matching fields on the type T. Annotations on fields of
 // this type will be used for the corresponding fields on T.
@@ -534,7 +539,7 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:remove_const(type_of(member)):];
+                    using element_type = [:type_of(member):];
                     if constexpr (new_config.HasAttn<Readonly>()) {
                         Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
                     } else {
@@ -564,7 +569,7 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:remove_const(type_of(member)):];
+                    using element_type = [:type_of(member):];
                     Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
                 }
             }
