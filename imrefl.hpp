@@ -64,6 +64,12 @@ struct Renderer
 template <Config config, typename T>
 struct Renderer<config, const T> : Renderer<config, T> {};
 
+template <Config config, typename T>
+struct Renderer<config, volatile T> : Renderer<config, T> {};
+
+template <Config config, typename T>
+struct Renderer<config, const volatile T> : Renderer<config, T> {};
+
 // Specialize this struct for different types by giving it fields
 // with names matching fields on the type T. Annotations on fields of
 // this type will be used for the corresponding fields on T.

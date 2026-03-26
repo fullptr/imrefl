@@ -35,8 +35,7 @@ enum class weapon
 
 struct player
 {
-    std::source_location loc = std::source_location::current();
-    std::complex<double> pos = {3, 4};
+    std::pair<const int, int> p = {1, 2};
 };
 
 int main()
