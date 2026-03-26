@@ -54,6 +54,7 @@ That's it! No macros or other setup needed!
 * `std::bitset<N>`.
 * `std::source_location`.
     * This is always read-only.
+* `std::complex<T>`.
 
 #### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
