@@ -37,9 +37,6 @@ struct player
 {
     std::source_location loc = std::source_location::current();
     std::complex<double> pos = {3, 4};
-    int x = 10;
-    const int y = 20;
-    const std::optional<int> z = 10;
 };
 
 int main()
