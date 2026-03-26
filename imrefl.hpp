@@ -194,9 +194,9 @@ concept can_push_pop_front = requires(T t)
 };
 
 template <typename T>
-concept can_insert = requires(T t, typename T::value_type value)
+concept can_emplace = requires(T t, typename T::value_type value)
 {
-    { t.insert(value) };
+    { t.emplace(value) };
 };
 
 template <typename T>
@@ -319,11 +319,11 @@ std::optional<T> get_new_value()
 {
     static T value {};
     if (square_button('+')) {
-        ImGui::OpenPopup("insert_popup");
+        ImGui::OpenPopup("emplace_popup");
     }
 
     auto return_val = std::optional<T>{};
-    if (ImGui::BeginPopup("insert_popup")) {
+    if (ImGui::BeginPopup("emplace_popup")) {
         Renderer<config, T>::Render("[new key]", value);
         if (ImGui::Button("Add")) {
             ImGui::CloseCurrentPopup();
@@ -428,7 +428,7 @@ bool render_forward_range(const char* name, R& range)
             }
 
             // TODO: Clean up the type trait use here; not everything is checked
-            else if constexpr (detail::can_insert<R>) {
+            else if constexpr (detail::can_emplace<R>) {
                 if constexpr (std::is_copy_assignable_v<element_type>) {
                     if (auto new_val = get_new_value<config, element_type>()) {
                         range.emplace(*new_val);
