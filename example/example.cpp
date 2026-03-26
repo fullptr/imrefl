@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include <map>
 #include <vector>
-#include <vector>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -35,7 +34,7 @@ enum class weapon
 
 struct player
 {
-    std::pair<const int, int> p = {1, 2};
+    std::unordered_map<weapon, int> weapon_counts;
 };
 
 int main()
