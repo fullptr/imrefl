@@ -5,6 +5,7 @@
 #include <imgui_internal.h>
 
 #include <bitset>
+#include <complex>
 #include <concepts>
 #include <format>
 #include <functional>
@@ -1059,6 +1060,33 @@ struct Renderer<config, std::source_location>
             value.column(),
             value.function_name());
         return false;
+    }
+};
+
+template <Config config, std::floating_point T>
+struct Renderer<config, std::complex<T>>
+{
+    static bool Render(const char* name, std::complex<T>& value)
+    {
+        ImGuiID id{name};
+        ImGui::Text("%s", name);
+        bool changed = false;
+        T real = value.real();
+        if (Renderer<config, T>::Render("Real", real)) {
+            value.real(real);
+            changed = true;
+        }
+        T imag = value.imag();
+        if (Renderer<config, T>::Render("Imag", imag)) {
+            value.imag(imag);
+            changed = true;
+        }
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::complex<T>& value)
+    {
+        return DelegateToNonConst<config>(name, value);
     }
 };
 
