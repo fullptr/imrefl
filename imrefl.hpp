@@ -349,14 +349,15 @@ bool render_pointer_as_value(const char* name, T* value)
     }
 }
 
-struct render_result { bool changed, erase; };
+struct render_result { bool changed, erased; };
 
 template <Config config, std::ranges::forward_range R>
-render_result render_range_element(const char* name, std::size_t i, R& range, std::ranges::range_reference_t<R> element)
+render_result render_range_element(const char* name, std::size_t i, R& range, std::ranges::iterator_t<R>& it)
 {
     constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
 
     const auto index_name = fmt("[{}]", i);
+    auto& element = *it;
 
     bool changed = false;
     if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
@@ -381,28 +382,32 @@ render_result render_range_element(const char* name, std::size_t i, R& range, st
         changed = Input<config>(index_name, element);
     }
 
-    bool erase = false;
+    bool erased = false;
     if constexpr (detail::can_erase<R>) {
         ImGui::SameLine();
-        erase = square_button(fmt("-##e{}", i));
+        if (square_button(fmt("-##e{}", i))) {
+            erased = true;
+            it = range.erase(it);
+        }
     }
 
-    return { changed, erase };
+    return { changed, erased };
 }
 
 template <can_push_pop_front R>
 bool render_push_pop_front(R& range)
 {
+    bool changed = false;
     if (square_button("-##front") && !std::ranges::empty(range)) {
         range.pop_front();
-        return true;
+        changed = true;
     }
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     if (square_button("+##front")) {
         range.emplace_front();
-        return true;
+        changed = true;
     }
-    return false;
+    return changed;
 }
 
 template <can_push_pop_back R>
@@ -414,16 +419,17 @@ bool render_push_pop_back(R& range)
         return false;
     }
 
+    bool changed = false;
     if (square_button("-##back") && !std::ranges::empty(range)) {
         range.pop_back();
-        return true;
+        changed = true;
     }
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     if (square_button("+##back")) {
         range.emplace_back();
-        return true;
+        changed = true;
     }
-    return false;
+    return changed;
 }
 
 template <Config config, std::ranges::forward_range R>
@@ -438,19 +444,19 @@ bool render_forward_range(const char* name, R& range)
     bool changed = false;
 
     if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
-        changed = render_push_pop_front(range) || changed;
+        changed |= render_push_pop_front(range);
     }
 
     size_t i = 0;
     for (auto it = range.begin(); it != range.end();) {
-        const auto result = render_range_element<config>(name, i, range, *it);
-        changed = changed || result.changed;
-        if (result.erase) { it = range.erase(it); } else { ++it; };
+        const auto result = render_range_element<config>(name, i, range, it);
+        changed |= result.changed;
+        if (!result.erased) ++it;
         ++i;
     }
 
     if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
-        changed = render_push_pop_back(range) || changed;
+        changed |= render_push_pop_back(range);
     }
 
     if constexpr (!config.HasAttn<NonResizable>()) {
