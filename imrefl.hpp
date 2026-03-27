@@ -297,13 +297,10 @@ consteval auto num_type()
     throw "unknown scalar type";
 }
 
-// Used for the + and - buttons. Only permits a single character
-// since the button is fixed size.
-bool square_button(char symbol)
+bool square_button(const char* name)
 {
-    const char buf[2] = {symbol, '\0'};
     const float button_size = ImGui::GetFrameHeight();
-    return ImGui::Button(buf, {button_size, button_size});
+    return ImGui::Button(name, {button_size, button_size});
 }
 
 // Stores an object of type T in static storage and implements a popup
@@ -313,7 +310,7 @@ template <Config config, typename T>
 std::optional<T> get_new_value()
 {
     static T value {};
-    if (square_button('+')) {
+    if (square_button("+##get_new_value")) {
         ImGui::OpenPopup("emplace_popup");
     }
 
@@ -352,12 +349,11 @@ bool render_forward_range(const char* name, R& range)
     bool changed = false;
     if (TreeNodeExNoDisable(name)) {
         if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
-            ImGuiID id{"front"};
-            if (square_button('-') && !range.empty()) {
+            if (square_button("-##front") && !range.empty()) {
                 range.pop_front();
             }
             ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (square_button('+')) {
+            if (square_button("+##front")) {
                 range.emplace_front();
             }
         }
@@ -394,7 +390,7 @@ bool render_forward_range(const char* name, R& range)
 
             if constexpr (detail::can_erase<R>) {
                 ImGui::SameLine();
-                if (square_button('-')) {
+                if (square_button("-##erase")) {
                     it = range.erase(it);
                 } else {
                     ++it;
@@ -410,14 +406,13 @@ bool render_forward_range(const char* name, R& range)
         if constexpr (!config.HasAttn<NonResizable>()) {
             if constexpr (detail::can_push_pop_back<R>) {
                 if (!detail::can_push_pop_front<R> || i > 0) {
-                    ImGuiID id{"back"};
-                        if (square_button('-') && !range.empty()) {
-                            range.pop_back();
-                        }
-                        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (square_button('+')) {
-                            range.emplace_back();
-                        }
+                    if (square_button("-##back") && !range.empty()) {
+                        range.pop_back();
+                    }
+                    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (square_button("+##back")) {
+                        range.emplace_back();
+                    }
                 }
             }
 
