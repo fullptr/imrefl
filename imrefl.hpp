@@ -185,12 +185,6 @@ concept can_push_pop_front =
     };
 
 template <typename T>
-concept can_emplace = requires(T t, typename T::value_type value)
-{
-    { t.emplace(value) };
-};
-
-template <typename T>
 concept can_erase = requires(T t, typename T::const_iterator it)
 {
     { t.erase(it) } -> std::convertible_to<typename T::const_iterator>;
@@ -202,10 +196,28 @@ concept tuple_like = requires {
 };
 
 template <typename T>
-concept is_mapping_type = requires {
-    typename T::key_type;
-    typename T::mapped_type;
-};
+concept is_map_type =
+    std::ranges::forward_range<T> &&
+    requires(T t) {
+        typename T::key_type;
+        typename T::mapped_type;
+    } &&
+    std::default_initializable<typename T::key_type> &&
+    std::default_initializable<typename T::mapped_type> &&
+    requires(T t, typename T::key_type key, typename T::mapping_type value) {
+        { t.emplace(key, value) };
+    };
+
+template <typename T>
+concept is_set_type =
+    std::ranges::forward_range<T> &&
+    requires(T t) {
+        typename T::key_type;
+    } &&
+    std::default_initializable<typename T::key_type> &&
+    requires(T t, typename T::key_type key) {
+        { t.emplace(key) };
+    };
 
 // INTERNAL HELPERS
 
@@ -298,7 +310,7 @@ bool square_button(const char* name)
 // Stores an object of type T in static storage and implements a popup
 // box for modifying the value. Returns a std::optional<T> containing the
 // produced value when the user clicks the Add button.
-template <Config config, typename T>
+template <Config config, std::default_initializable T>
 std::optional<T> get_new_value()
 {
     static T value {};
@@ -349,10 +361,8 @@ bool render_pointer_as_value(const char* name, T* value)
     }
 }
 
-struct render_result { bool changed, erased; };
-
 template <Config config, std::ranges::forward_range R>
-render_result render_range_element(const char* name, std::size_t i, R& range, std::ranges::iterator_t<R>& it)
+bool render_range_element(const char* name, std::size_t i, R& range, std::ranges::iterator_t<R>& it)
 {
     constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
 
@@ -382,16 +392,16 @@ render_result render_range_element(const char* name, std::size_t i, R& range, st
         changed = Input<config>(index_name, element);
     }
 
-    bool erased = false;
     if constexpr (detail::can_erase<R>) {
         ImGui::SameLine();
         if (square_button(fmt("-##e{}", i))) {
-            erased = true;
             it = range.erase(it);
+        } else {
+            ++it;
         }
     }
 
-    return { changed, erased };
+    return changed;
 }
 
 template <can_push_pop_front R>
@@ -435,8 +445,6 @@ bool render_push_pop_back(R& range)
 template <Config config, std::ranges::forward_range R>
 bool render_forward_range(const char* name, R& range)
 {
-    using element_type = std::ranges::range_value_t<R>; 
-
     if (!TreeNodeExNoDisable(name)) {
         return false;
     }
@@ -449,9 +457,7 @@ bool render_forward_range(const char* name, R& range)
 
     size_t i = 0;
     for (auto it = range.begin(); it != range.end();) {
-        const auto result = render_range_element<config>(name, i, range, it);
-        changed |= result.changed;
-        if (!result.erased) ++it;
+        changed |= render_range_element<config>(name, i, range, it);
         ++i;
     }
 
@@ -460,22 +466,20 @@ bool render_forward_range(const char* name, R& range)
     }
 
     if constexpr (!config.HasAttn<NonResizable>()) {
-        // TODO: Clean up the type trait use here; not everything is checked
-        if constexpr (detail::can_emplace<R>) {
-            if constexpr (std::is_copy_assignable_v<element_type>) {
-                if (auto new_val = get_new_value<config, element_type>()) {
-                    range.emplace(*new_val);
-                    changed = true; // not necessarily true if the key already exists
-                }
+        if constexpr (is_map_type<R>) {
+            using Key = typename R::key_type;
+            using Value = typename R::mapped_type;
+            if (auto new_val = get_new_value<config, Key>()) {
+                range.emplace(*new_val, Value{});
+                changed = true; // not necessarily true if the key already exists
             }
+        }
 
-            else if constexpr (is_mapping_type<R>) {
-                using Key = typename R::key_type;
-                using Value = typename R::mapped_type;
-                if (auto new_val = get_new_value<config, Key>()) {
-                    range.emplace(*new_val, Value{});
-                    changed = true; // not necessarily true if the key already exists
-                }
+        else if constexpr (is_set_type<R>) {
+            using Key = typename R::key_type;
+            if (auto new_val = get_new_value<config, Key>()) {
+                range.emplace(*new_val);
+                changed = true; // not necessarily true if the key already exists
             }
         }
     }
