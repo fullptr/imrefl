@@ -99,7 +99,7 @@ struct ImRefl::Renderer<config, custom_type>
     static bool Render(const char* name, custom_type& type)
     {
         int inner = value.get();
-        if (Renderer<config, int>::Render(name, inner)) { // delegate to another Renderer
+        if (Input<config>(name, inner)) { // delegate back to Input
             value.set(inner);
             return true;
         }
@@ -117,7 +117,7 @@ There are a few key things to point out:
 
 * Implementations of `Renderer` take a `ImRefl::Config` non-type template parameter. This is the mechanism for passing annotation data around; if a struct contains a data member of this type and it is annotated, then these annotations are accessible through the config. This means that third-party types can make use of the given `ImRefl` annotations as well as allowing users to define their own.
 * These functions should return `bool`, indicating if the given value has changed. The non-`const` version thus should always return false.
-* You can delegate to other `Renderer` implementations.
+* You can delegate to `ImRefl::Input` for other types.
 * Implementing two versions of the `Render` function can be tedious, and if your type is small and cheap to copy, you may want to implement the `const` version by simply taking a mutable copy and calling the non-`const` version. For that `ImRefl` provides the helper function `DelegateToNonConst` to do exactly this.
 
 ### External annotations
@@ -140,7 +140,6 @@ struct ImRefl::ExternalAnnotations<player>
 ### Helper functions
 This section is still a work in progress as we work out which functionality is useful to expose to users.
 
-* `ImGuiID` - this is a helper RAII wrapper class for `ImGui::PushID/PopId`.
 * `TreeNodeExNoDisable` - this is a wrapper function for `ImGui::TreeNodeEx`. This is useful for creating a tree node that is still expandable/collapsible when in read-only mode.
 * `DelegateToNonConst` - a helper function for implementing a `const&` render function by calling the `&` version (by making a temporary copy). See the third-party example above.
 
