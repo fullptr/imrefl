@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 #include <meta>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <source_location>
@@ -60,17 +61,6 @@ struct Renderer
     static_assert(sizeof(T) == 0, "No Renderer implementation for type T");
 };
 
-// Strips const out of the type automatically, this prevents ambiguous overloads
-// because Render(const T&) and Render(T&) are the same signature when T is const
-template <Config config, typename T>
-struct Renderer<config, const T> : Renderer<config, T> {};
-
-template <Config config, typename T>
-struct Renderer<config, volatile T> : Renderer<config, T> {};
-
-template <Config config, typename T>
-struct Renderer<config, const volatile T> : Renderer<config, T> {};
-
 // Specialize this struct for different types by giving it fields
 // with names matching fields on the type T. Annotations on fields of
 // this type will be used for the corresponding fields on T.
@@ -78,13 +68,19 @@ template <typename T>
 struct ExternalAnnotations
 {};
 
+template <Config config, typename T>
+bool Input(const char* name, T&& value)
+{
+    using Type = [:remove_cvref(^^T):];
+    return Renderer<config, Type>::Render(name, std::forward<T>(value));
+}
+
 // The main entry point for rendering.
 template <typename T>
 bool Input(const char* name, T&& value)
 {
-    using Type = [:remove_cvref(^^T):];
     constexpr auto config = Config{};
-    return Renderer<config, Type>::Render(name, std::forward<T>(value));
+    return Input<config>(name, std::forward<T>(value));
 }
 
 // ============================================================================
@@ -159,7 +155,7 @@ bool DelegateToNonConst(const char* name, const T& value)
 {
     T mutable_value = value;
     ImGui::BeginDisabled();
-    Renderer<config, T>::Render(name, mutable_value);
+    Input<config>(name, mutable_value);
     ImGui::EndDisabled();
     return false;
 }
@@ -171,13 +167,13 @@ namespace detail {
 // INTERNAL CONCEPTS
 
 template <typename T>
-concept scalar = std::meta::is_arithmetic_type(^^T) && (^^T != ^^bool);
+concept scalar = is_arithmetic_type(^^T) && (^^T != ^^bool);
 
 template <typename T>
-concept scoped_enum = std::meta::is_scoped_enum_type(^^T);
+concept scoped_enum = is_scoped_enum_type(^^T);
 
 template <typename T>
-concept aggregate = std::meta::is_aggregate_type(^^T);
+concept aggregate = is_aggregate_type(^^T);
 
 template<typename T>
 concept can_push_pop_back = requires(T t)
@@ -218,17 +214,17 @@ concept is_mapping_type = requires {
 
 // INTERNAL HELPERS
 
-template <typename T>
-consteval auto nsdm_of()
+consteval auto nsdm_of(std::meta::info type)
 {
     const auto ctx = std::meta::access_context::current();
-	return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx));
+	return std::define_static_array(nonstatic_data_members_of(type, ctx));
 }
 
-template <typename parent>
-consteval std::vector<std::meta::info> external_attns(std::meta::info member)
+consteval std::vector<std::meta::info> external_attns(
+    std::meta::info parent, std::meta::info member)
 {
-    for (const auto m : nsdm_of<ExternalAnnotations<parent>>()) {
+    const auto external = substitute(^^ExternalAnnotations, {parent});
+    for (const auto m : nsdm_of(external)) {
         if (identifier_of(member) == identifier_of(m)) {
             return annotations_of(m);
         }
@@ -236,39 +232,35 @@ consteval std::vector<std::meta::info> external_attns(std::meta::info member)
     return {};
 }
 
-template <std::meta::info member, typename parent>
-consteval std::vector<std::meta::info> get_all_attns()
+consteval auto get_all_attns(std::meta::info parent, std::meta::info member)
 {
-    auto hints = annotations_of(member);
+    auto attns = annotations_of(member);
     
-    for (const auto hint : external_attns<parent>(member)) {
-        hints.push_back(hint);
+    for (const auto attn : external_attns(parent, member)) {
+        attns.push_back(attn);
     }
 
-    return hints;
+    return std::define_static_array(attns);
 }
 
 consteval auto integer_sequence(std::size_t max)
 {
-    std::vector<std::size_t> values;
-    for (std::size_t i = 0; i != max; ++i) {
-        values.push_back(i);
-    }
+    std::vector<std::size_t> values(max);
+    std::iota(values.begin(), values.end(), 0);
     return std::define_static_array(values);
 }
 
-template <detail::scoped_enum T>
-consteval auto enums_of()
+consteval auto enums_of(std::meta::info type)
 {
-    return std::define_static_array(std::meta::enumerators_of(^^T));
+    return std::define_static_array(enumerators_of(type));
 }
 
 template <detail::scoped_enum T>
 constexpr const char* enum_to_string(T value)
 {
-    template for (constexpr auto e : enums_of<T>()) {
+    template for (constexpr auto e : enums_of(^^T)) {
         if (value == [:e:]) {
-            return std::meta::identifier_of(e).data();
+            return identifier_of(e).data();
         }
     }
     return "<unnamed>";
@@ -324,7 +316,7 @@ std::optional<T> get_new_value()
 
     auto return_val = std::optional<T>{};
     if (ImGui::BeginPopup("emplace_popup")) {
-        Renderer<config, T>::Render("[new key]", value);
+        Input<config>("[new key]", value);
         if (ImGui::Button("Add")) {
             ImGui::CloseCurrentPopup();
             return_val = value;        
@@ -341,7 +333,7 @@ template <Config config, typename T>
 bool render_pointer_as_value(const char* name, T* value)
 {
     if (value) {
-        return Renderer<config, T>::Render(name, *value);
+        return Input<config>(name, *value);
     } else {
         ImGui::Text("%s: <nullptr>", name);
         return false;
@@ -375,7 +367,7 @@ bool render_forward_range(const char* name, R& range)
             const std::string index_name = std::format("[{}]", i);
 
             if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
-                changed = Renderer<config, element_type>::Render("", element) || changed;
+                changed = Input<config>("", element) || changed;
 
                 ImGui::SameLine();
                 const float selectableWidth = ImGui::CalcTextSize(index_name.c_str()).x;
@@ -395,7 +387,7 @@ bool render_forward_range(const char* name, R& range)
                 }
             }
             else {
-                changed = Renderer<config, element_type>::Render(index_name.c_str(), element) || changed;
+                changed = Input<config>(index_name.c_str(), element) || changed;
             }
 
             if constexpr (detail::can_erase<R>) {
@@ -455,13 +447,11 @@ bool render_forward_range(const char* name, R& range)
 template <Config config, std::ranges::forward_range R>
 bool render_forward_range(const char* name, const R& range)
 {
-    using element_type = std::ranges::range_value_t<R>; 
-
     ImGuiID id{name};
     if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
-            Renderer<config, element_type>::Render(std::format("[{}]", i).c_str(), element); 
+            Input<config>(std::format("[{}]", i).c_str(), element); 
             ++i;
         }
         ImGui::TreePop();
@@ -498,7 +488,7 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
     for (std::size_t i = 0; i != count; ++i) {
         ImGuiID id{i};
-        Renderer<config, T>::Render("", val[i]);
+        Input<config>("", val[i]);
         ImGui::PopItemWidth();
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     }
@@ -507,36 +497,30 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
     return false;
 }
 
-template <Config config, tuple_like TupleType>
-bool render_tuple_like(const char* name, TupleType& value)
+template <Config config, tuple_like T>
+bool render_tuple_like(const char* name, T& value)
 {
-    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
-
     ImGuiID guard{name};
     bool changed = false;
 
     ImGui::Text("%s", name);
-    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+    template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
         ImGuiID guard{index};
-        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
-        changed = Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value)) || changed;
+        changed = Input<config>(std::to_string(index).c_str(), std::get<index>(value)) || changed;
     }
 
     return changed;
 }
 
-template <Config config, tuple_like TupleType>
-bool render_tuple_like(const char* name, const TupleType& value)
+template <Config config, tuple_like T>
+bool render_tuple_like(const char* name, const T& value)
 {
-    static constexpr std::size_t tuple_size = std::meta::tuple_size(^^TupleType);
-
     ImGuiID guard{name};
 
     ImGui::Text("%s", name);
-    template for (constexpr auto index : detail::integer_sequence(tuple_size)) {
+    template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
         ImGuiID guard{index};
-        using element_type = [:std::meta::tuple_element(index, ^^TupleType):];
-        Renderer<config, element_type>::Render(std::to_string(index).c_str(), std::get<index>(value));
+        Input<config>(std::to_string(index).c_str(), std::get<index>(value));
     }
 
     return false;
@@ -557,8 +541,8 @@ struct Renderer<config, T>
         bool changed = false;
 
         if (TreeNodeExNoDisable(name)) {
-            template for (constexpr auto member : detail::nsdm_of<T>()) {
-                constexpr auto attns = std::define_static_array(detail::get_all_attns<member, T>());
+            template for (constexpr auto member : detail::nsdm_of(^^T)) {
+                constexpr auto attns = detail::get_all_attns(^^T, member);
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (!new_config.HasAttn<Ignore>()) {
@@ -567,11 +551,10 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:type_of(member):];
                     if constexpr (new_config.HasAttn<Readonly>()) {
-                        Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), std::as_const(x.[:member:]));
+                        Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
                     } else {
-                        changed = Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]) || changed;
+                        changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
                     }
                 }
             }
@@ -587,8 +570,8 @@ struct Renderer<config, T>
         ImGuiID guard{name};
 
         if (TreeNodeExNoDisable(name)) {
-            template for (constexpr auto member : detail::nsdm_of<T>()) {
-                constexpr auto attns = std::define_static_array(detail::get_all_attns<member, T>());
+            template for (constexpr auto member : detail::nsdm_of(^^T)) {
+                constexpr auto attns = detail::get_all_attns(^^T, member);
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (!new_config.HasAttn<Ignore>()) {
@@ -597,8 +580,7 @@ struct Renderer<config, T>
                         ImGui::SeparatorText(separator->title);
                     }
 
-                    using element_type = [:type_of(member):];
-                    Renderer<new_config, element_type>::Render(std::meta::identifier_of(member).data(), x.[:member:]);
+                    Input<new_config>(identifier_of(member).data(), x.[:member:]);
                 }
             }
 
@@ -618,10 +600,9 @@ struct Renderer<config, T>
         bool changed = false;
         if constexpr (config.HasAttn<Radio>()) {
             ImGui::Text("%s", name);
-            template for (constexpr auto e : detail::enums_of<T>()) {
-                constexpr auto enum_name = std::meta::identifier_of(e);
+            template for (constexpr auto e : detail::enums_of(^^T)) {
                 ImGui::SameLine();
-                if (ImGui::RadioButton(enum_name.data(), value == [:e:])) {
+                if (ImGui::RadioButton(identifier_of(e).data(), value == [:e:])) {
                     value = [:e:];
                     changed = true;
                 }
@@ -629,9 +610,8 @@ struct Renderer<config, T>
         } else {
             const auto value_name = detail::enum_to_string(value);
             if (ImGui::BeginCombo(name, value_name)) {
-                template for (constexpr auto e : detail::enums_of<T>()) {
-                    constexpr auto enum_name = std::meta::identifier_of(e);
-                    if (ImGui::Selectable(enum_name.data(), value == [:e:])) {
+                template for (constexpr auto e : detail::enums_of(^^T)) {
+                    if (ImGui::Selectable(identifier_of(e).data(), value == [:e:])) {
                         value = [:e:];
                         changed = true;
                     }
@@ -666,7 +646,7 @@ struct Renderer<config, T>
         // Treat long double as a simple double as ImGui does not support it natively
         else if constexpr (^^T == ^^long double) {
             double temp = static_cast<double>(value);
-            if (Renderer<config, double>::Render(name, temp)) {
+            if (Input<config>(name, temp)) {
                 value = temp;
                 return true;
             }
@@ -714,12 +694,12 @@ struct Renderer<config, T[N]>
 
     static bool Render(const char* name, Type& arr)
     {
-        return Renderer<config, std::span<T>>::Render(name, arr);
+        return Input<config, std::span<T>>(name, arr);
     }
 
     static bool Render(const char* name, const Type& arr)
     {
-        return Renderer<config, std::span<const T>>::Render(name, arr);
+        return Input<config, std::span<const T>>(name, arr);
     }
 };
 
@@ -728,12 +708,12 @@ struct Renderer<config, std::array<T, N>>
 {
     static bool Render(const char* name, std::array<T, N>& arr)
     {
-        return Renderer<config, std::span<T>>::Render(name, arr);
+        return Input<config, std::span<T>>(name, arr);
     }
 
     static bool Render(const char* name, const std::array<T, N>& arr)
     {
-        return Renderer<config, std::span<const T>>::Render(name, arr);
+        return Input<config, std::span<const T>>(name, arr);
     }
 };
 
@@ -795,7 +775,7 @@ struct Renderer<config, std::span<const T>>
                 float copy[4] = {};
                 std::copy(arr.begin(), arr.end(), std::begin(copy));
                 ImGui::BeginDisabled();
-                Renderer<config, std::span<T>>::Render(name, std::span{copy, arr.size()});
+                Input<config>(name, std::span{copy, arr.size()});
                 ImGui::EndDisabled();
                 return false;
             }
@@ -895,7 +875,7 @@ struct Renderer<config, std::optional<T>>
 
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
             ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-            changed = Renderer<config, T>::Render(name, *value) || should_remove;
+            changed = Input<config>(name, *value) || should_remove;
 
             if (should_remove) {
                 value = {};     // Delay this so as not to pass invalid memory to Render
@@ -919,7 +899,7 @@ struct Renderer<config, std::optional<T>>
         const ImGuiStyle& style = ImGui::GetStyle();
         if (value.has_value()) {
             ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
-            Renderer<config, T>::Render(name, *value);
+            Input<config>(name, *value);
         } else {
             ImGui::Text("%s: <empty>", name);
         }
@@ -935,7 +915,7 @@ struct Renderer<config, std::variant<Ts...>>
         ImGuiID guard{name};
         const ImGuiStyle& style = ImGui::GetStyle();
 
-        static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+        static const char* type_names[] = { display_string_of(^^Ts).data()... };
         bool changed = false;
 
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
@@ -954,7 +934,7 @@ struct Renderer<config, std::variant<Ts...>>
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
         template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
             if (index == value.index()) {
-                changed = Renderer<config, Ts...[index]>::Render(name, std::get<index>(value)) || changed;
+                changed = Input<config>(name, std::get<index>(value)) || changed;
             }
         }
 
@@ -967,7 +947,7 @@ struct Renderer<config, std::variant<Ts...>>
         ImGui::BeginDisabled();
         const ImGuiStyle& style = ImGui::GetStyle();
 
-        static const char* type_names[] = { std::meta::display_string_of(^^Ts).data()... };
+        static const char* type_names[] = { display_string_of(^^Ts).data()... };
 
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
@@ -982,7 +962,7 @@ struct Renderer<config, std::variant<Ts...>>
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
         template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
             if (index == value.index()) {
-                Renderer<config, Ts...[index]>::Render(name, std::get<index>(value));
+                Input<config>(name, std::get<index>(value));
             }
         }
 
@@ -1032,7 +1012,7 @@ struct Renderer<config, std::weak_ptr<T>>
             ImGui::Text("%s: <expired>", name);
             return false;
         }
-        return Renderer<config, std::shared_ptr<T>>::Render(name, value.lock());
+        return Input<config>(name, value.lock());
     }
 };
 
@@ -1057,11 +1037,10 @@ struct Renderer<config, std::bitset<N>>
         ImGui::Text("%s", name);
 
         bool changed = false;
-        bool proxy;
         template for (constexpr auto i : detail::integer_sequence(N)) {
-            proxy = value[i];
+            bool proxy = value[i];
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            changed = Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), proxy) || changed;
+            changed = Input<config>(std::format("[{}]", i).c_str(), proxy) || changed;
             value[i] = proxy;
         }
         return changed;
@@ -1074,7 +1053,7 @@ struct Renderer<config, std::bitset<N>>
 
         template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            Renderer<config, bool>::Render(std::format("[{}]", i).c_str(), value[i]);
+            Input<config>(std::format("[{}]", i).c_str(), value[i]);
         }
         return false;
     }
@@ -1105,12 +1084,12 @@ struct Renderer<config, std::complex<T>>
         ImGui::Text("%s", name);
         bool changed = false;
         T real = value.real();
-        if (Renderer<config, T>::Render("Real", real)) {
+        if (Input<config>("Real", real)) {
             value.real(real);
             changed = true;
         }
         T imag = value.imag();
-        if (Renderer<config, T>::Render("Imag", imag)) {
+        if (Input<config>("Imag", imag)) {
             value.imag(imag);
             changed = true;
         }

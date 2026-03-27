@@ -34,7 +34,8 @@ enum class weapon
 
 struct player
 {
-    std::unordered_map<weapon, int> weapon_counts;
+    std::pair<int, int> x = {1, 2};
+    const std::pair<int, int> y = {3, 4};
 };
 
 int main()
