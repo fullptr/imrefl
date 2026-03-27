@@ -167,18 +167,22 @@ template <typename T>
 concept aggregate = is_aggregate_type(^^T);
 
 template<typename T>
-concept can_push_pop_back = requires(T t)
-{
-    { t.emplace_back() };
-    { t.pop_back() };
-};
+concept can_push_pop_back =
+    std::ranges::forward_range<T> &&
+    std::default_initializable<std::ranges::range_value_t<T>> &&
+    requires(T t) {
+        { t.emplace_back() };
+        { t.pop_back() };
+    };
 
 template<typename T>
-concept can_push_pop_front = requires(T t)
-{
-    { t.emplace_front() };
-    { t.pop_front() };
-};
+concept can_push_pop_front = 
+    std::ranges::forward_range<T> &&
+    std::default_initializable<std::ranges::range_value_t<T>> &&
+    requires(T t) {
+        { t.emplace_front() };
+        { t.pop_front() };
+    };
 
 template <typename T>
 concept can_emplace = requires(T t, typename T::value_type value)
@@ -345,103 +349,132 @@ bool render_pointer_as_value(const char* name, T* value)
     }
 }
 
+struct render_result { bool changed, erase; };
+
+template <Config config, std::ranges::forward_range R>
+render_result render_range_element(const char* name, std::size_t i, R& range, std::ranges::range_reference_t<R> element)
+{
+    constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
+
+    const auto index_name = fmt("[{}]", i);
+
+    bool changed = false;
+    if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
+        changed = Input<config>(fmt("##{}", i), element);
+
+        ImGui::SameLine();
+        const float selectableWidth = ImGui::CalcTextSize(index_name).x;
+        ImGui::Selectable(index_name, false, ImGuiSelectableFlags_None, {selectableWidth, 0});
+        if (ImGui::BeginDragDropSource()) {
+            ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
+            ImGui::EndDragDropSource();
+        }
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(name)) {
+                const size_t index = *(const size_t*)payload->Data;
+                if (index != i) std::swap(range[index], element);
+            }
+            ImGui::EndDragDropTarget();
+        }
+    }
+    else {
+        changed = Input<config>(index_name, element);
+    }
+
+    bool erase = false;
+    if constexpr (detail::can_erase<R>) {
+        ImGui::SameLine();
+        erase = square_button(fmt("-##e{}", i));
+    }
+
+    return { changed, erase };
+}
+
+template <can_push_pop_front R>
+bool render_push_pop_front(R& range)
+{
+    if (square_button("-##front") && !std::ranges::empty(range)) {
+        range.pop_front();
+        return true;
+    }
+    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+    if (square_button("+##front")) {
+        range.emplace_front();
+        return true;
+    }
+    return false;
+}
+
+template <can_push_pop_back R>
+bool render_push_pop_back(R& range)
+{
+    // If the container can be modified at both ends, we don't need to have both
+    // sets of +/- buttosn when it is empty
+    if (can_push_pop_front<R> && std::ranges::empty(range)) {
+        return false;
+    }
+
+    if (square_button("-##back") && !std::ranges::empty(range)) {
+        range.pop_back();
+        return true;
+    }
+    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+    if (square_button("+##back")) {
+        range.emplace_back();
+        return true;
+    }
+    return false;
+}
+
 template <Config config, std::ranges::forward_range R>
 bool render_forward_range(const char* name, R& range)
 {
-    constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
     using element_type = std::ranges::range_value_t<R>; 
 
-    bool changed = false;
-    if (TreeNodeExNoDisable(name)) {
-        if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
-            if (square_button("-##front") && !range.empty()) {
-                range.pop_front();
-            }
-            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (square_button("+##front")) {
-                range.emplace_front();
-            }
-        }
-
-        size_t i = 0;
-        for (auto it = range.begin(); it != range.end();) {
-            auto& element = *it;
-            const auto index_name = fmt("[{}]", i);
-
-            if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
-                changed = Input<config>(fmt("##{}", i), element) || changed;
-
-                ImGui::SameLine();
-                const float selectableWidth = ImGui::CalcTextSize(index_name).x;
-                ImGui::Selectable(index_name, false, ImGuiSelectableFlags_None, {selectableWidth, 0});
-                if (ImGui::BeginDragDropSource()) {
-                    ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
-                    ImGui::EndDragDropSource();
-                }
-                if (ImGui::BeginDragDropTarget()) {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(name)) {
-                        const size_t index = *(const size_t*)payload->Data;
-                        if (index != i) {
-                            std::swap(range[index], element);
-                        }
-                    }
-                    ImGui::EndDragDropTarget();
-                }
-            }
-            else {
-                changed = Input<config>(index_name, element) || changed;
-            }
-
-            if constexpr (detail::can_erase<R>) {
-                ImGui::SameLine();
-                if (square_button(fmt("-##e{}", i))) {
-                    it = range.erase(it);
-                } else {
-                    ++it;
-                }
-            } else {
-                ++it;
-            }
-            ++i;
-        }
-
-        // TODO: This needs to be made a bit more general. Currently it does not support push_back
-        // for types where the element type is not copy assignable, for example
-        if constexpr (!config.HasAttn<NonResizable>()) {
-            if constexpr (detail::can_push_pop_back<R>) {
-                if (!detail::can_push_pop_front<R> || i > 0) {
-                    if (square_button("-##back") && !range.empty()) {
-                        range.pop_back();
-                    }
-                    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (square_button("+##back")) {
-                        range.emplace_back();
-                    }
-                }
-            }
-
-            // TODO: Clean up the type trait use here; not everything is checked
-            else if constexpr (detail::can_emplace<R>) {
-                if constexpr (std::is_copy_assignable_v<element_type>) {
-                    if (auto new_val = get_new_value<config, element_type>()) {
-                        range.emplace(*new_val);
-                        changed = true; // not necessarily true if the key already exists
-                    }
-                }
-
-                else if constexpr (is_mapping_type<R>) {
-                    using Key = typename R::key_type;
-                    using Value = typename R::mapped_type;
-                    if (auto new_val = get_new_value<config, Key>()) {
-                        range.emplace(*new_val, Value{});
-                        changed = true; // not necessarily true if the key already exists
-                    }
-                }
-            }
-        }
-
-        ImGui::TreePop();
+    if (!TreeNodeExNoDisable(name)) {
+        return false;
     }
+
+    bool changed = false;
+
+    if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
+        changed = render_push_pop_front(range) || changed;
+    }
+
+    size_t i = 0;
+    for (auto it = range.begin(); it != range.end();) {
+        const auto result = render_range_element<config>(name, i, range, *it);
+        changed = changed || result.changed;
+        if (result.erase) { it = range.erase(it); } else { ++it; };
+        ++i;
+    }
+
+    if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
+        changed = render_push_pop_back(range) || changed;
+    }
+
+    if constexpr (!config.HasAttn<NonResizable>()) {
+        // TODO: Clean up the type trait use here; not everything is checked
+        if constexpr (detail::can_emplace<R>) {
+            if constexpr (std::is_copy_assignable_v<element_type>) {
+                if (auto new_val = get_new_value<config, element_type>()) {
+                    range.emplace(*new_val);
+                    changed = true; // not necessarily true if the key already exists
+                }
+            }
+
+            else if constexpr (is_mapping_type<R>) {
+                using Key = typename R::key_type;
+                using Value = typename R::mapped_type;
+                if (auto new_val = get_new_value<config, Key>()) {
+                    range.emplace(*new_val, Value{});
+                    changed = true; // not necessarily true if the key already exists
+                }
+            }
+        }
+    }
+
+    ImGui::TreePop();
     return changed;
 }
 

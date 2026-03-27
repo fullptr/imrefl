@@ -34,7 +34,7 @@ enum class weapon
 
 struct player
 {
-    std::set<int> data = {1, 2, 3, 4, 5, 6};
+    std::deque<int> data = {1, 2, 3, 4, 5, 6};
 };
 
 int main()
