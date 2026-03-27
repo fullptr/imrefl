@@ -327,6 +327,23 @@ std::optional<T> get_new_value()
     return return_val;
 }
 
+// Helper wrapper for std::format_to_n for small strings. Should be used carefully
+// and used internally to avoid unnecessary allocations.
+struct small_string
+{
+    char buf[32];
+    operator const char*() const { return buf; }
+};
+
+template <typename... Args>
+small_string fmt(std::format_string<Args...> fmt, Args&&... args)
+{
+    small_string ret;
+    auto result = std::format_to_n(ret.buf, sizeof(ret.buf) - 1, fmt, std::forward<Args>(args)...);
+    *result.out = '\0';
+    return ret;
+}
+
 // INTERNAL RENDERER IMPLEMENTATIONS
 
 template <Config config, typename T>
@@ -362,14 +379,14 @@ bool render_forward_range(const char* name, R& range)
         for (auto it = range.begin(); it != range.end();) {
             auto& element = *it;
             ImGuiID id(i);
-            const std::string index_name = std::format("[{}]", i);
+            const auto index_name = fmt("[{}]", i);
 
             if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
-                changed = Input<config>("", element) || changed;
+                changed = Input<config>(fmt("##{}", i), element) || changed;
 
                 ImGui::SameLine();
-                const float selectableWidth = ImGui::CalcTextSize(index_name.c_str()).x;
-                ImGui::Selectable(index_name.c_str(), false, ImGuiSelectableFlags_None, {selectableWidth, 0});
+                const float selectableWidth = ImGui::CalcTextSize(index_name).x;
+                ImGui::Selectable(index_name, false, ImGuiSelectableFlags_None, {selectableWidth, 0});
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
                     ImGui::EndDragDropSource();
@@ -385,7 +402,7 @@ bool render_forward_range(const char* name, R& range)
                 }
             }
             else {
-                changed = Input<config>(index_name.c_str(), element) || changed;
+                changed = Input<config>(index_name, element) || changed;
             }
 
             if constexpr (detail::can_erase<R>) {
@@ -447,7 +464,7 @@ bool render_forward_range(const char* name, const R& range)
     if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
-            Input<config>(std::format("[{}]", i).c_str(), element); 
+            Input<config>(fmt("[{}]", i), element); 
             ++i;
         }
         ImGui::TreePop();
@@ -483,8 +500,7 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
     ImGui::BeginGroup();
     ImGui::PushMultiItemsWidths(count, ImGui::CalcItemWidth());
     for (std::size_t i = 0; i != count; ++i) {
-        ImGuiID id{i};
-        Input<config>("", val[i]);
+        Input<config>(fmt("##{}", i), val[i]);
         ImGui::PopItemWidth();
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     }
@@ -499,7 +515,7 @@ bool render_tuple_like(const char* name, T& value)
     bool changed = false;
     ImGui::Text("%s", name);
     template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
-        changed = Input<config>(std::to_string(index).c_str(), std::get<index>(value)) || changed;
+        changed = Input<config>(fmt("##{}", index), std::get<index>(value)) || changed;
     }
     return changed;
 }
@@ -509,7 +525,7 @@ bool render_tuple_like(const char* name, const T& value)
 {
     ImGui::Text("%s", name);
     template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
-        Input<config>(std::to_string(index).c_str(), std::get<index>(value));
+        Input<config>(fmt("##{}", index), std::get<index>(value));
     }
     return false;
 }
@@ -1015,7 +1031,7 @@ struct Renderer<config, std::bitset<N>>
         template for (constexpr auto i : detail::integer_sequence(N)) {
             bool proxy = value[i];
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            changed = Input<config>(std::format("[{}]", i).c_str(), proxy) || changed;
+            changed = Input<config>(fmt("[{}]", i), proxy) || changed;
             value[i] = proxy;
         }
         return changed;
@@ -1026,7 +1042,7 @@ struct Renderer<config, std::bitset<N>>
         ImGui::Text("%s", name);
         template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            Input<config>(std::format("[{}]", i).c_str(), value[i]);
+            Input<config>(fmt("[{}]", i), value[i]);
         }
         return false;
     }
