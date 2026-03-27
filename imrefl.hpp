@@ -127,18 +127,6 @@ inline static constexpr Radio radio {};
 // LIBRARY UTILITY 
 // ============================================================================
 
-// An RAII wrapper for ImGui::PushID/PopID
-struct ImGuiID
-{
-    ImGuiID(const char* id) { ImGui::PushID(id); }
-    ImGuiID(std::size_t id) { ImGui::PushID(id); }
-    ImGuiID(const ImGuiID&) = delete;
-    ImGuiID& operator=(const ImGuiID&) = delete;
-    ImGuiID(ImGuiID&&) = delete;
-    ImGuiID& operator=(ImGuiID&&) = delete;
-    ~ImGuiID() { ImGui::PopID(); }
-};
-
 // A wrapper for TreeNodeEx that allows the tree to be opened and collapsed
 // even in read-only mode. 
 inline bool TreeNodeExNoDisable(const char* label)
@@ -378,7 +366,6 @@ bool render_forward_range(const char* name, R& range)
         size_t i = 0;
         for (auto it = range.begin(); it != range.end();) {
             auto& element = *it;
-            ImGuiID id(i);
             const auto index_name = fmt("[{}]", i);
 
             if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
@@ -407,7 +394,7 @@ bool render_forward_range(const char* name, R& range)
 
             if constexpr (detail::can_erase<R>) {
                 ImGui::SameLine();
-                if (square_button("-##erase")) {
+                if (square_button(fmt("-##e{}", i))) {
                     it = range.erase(it);
                 } else {
                     ++it;
@@ -915,11 +902,12 @@ struct Renderer<config, std::variant<Ts...>>
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
             template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
-                ImGuiID id{index};
+                ImGui::PushID(index);
                 if (ImGui::Selectable(type_names[index])) {
                     value.template emplace<index>();
                     changed = true;
                 }
+                ImGui::PopID();
             }
             ImGui::EndCombo();
         }
@@ -945,8 +933,9 @@ struct Renderer<config, std::variant<Ts...>>
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
             template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
-                ImGuiID id{index};
+                ImGui::PushID(index);
                 ImGui::Selectable(type_names[index]);
+                ImGui::PopID();
             }
             ImGui::EndCombo();
         }
