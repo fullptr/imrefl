@@ -72,7 +72,10 @@ template <Config config, typename T>
 bool Input(const char* name, T&& value)
 {
     using Type = [:remove_cvref(^^T):];
-    return Renderer<config, Type>::Render(name, std::forward<T>(value));
+    ImGui::PushID(name);
+    const bool changed = Renderer<config, Type>::Render(name, std::forward<T>(value));
+    ImGui::PopID();
+    return changed;
 }
 
 // The main entry point for rendering.
@@ -346,7 +349,6 @@ bool render_forward_range(const char* name, R& range)
     constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
     using element_type = std::ranges::range_value_t<R>; 
 
-    ImGuiID id{name};
     bool changed = false;
     if (TreeNodeExNoDisable(name)) {
         if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
@@ -447,7 +449,6 @@ bool render_forward_range(const char* name, R& range)
 template <Config config, std::ranges::forward_range R>
 bool render_forward_range(const char* name, const R& range)
 {
-    ImGuiID id{name};
     if (TreeNodeExNoDisable(name)) {
         size_t i = 0;
         for (auto& element : range) {
@@ -500,29 +501,21 @@ bool render_scalar_n(const char* name, const T* val, std::size_t count)
 template <Config config, tuple_like T>
 bool render_tuple_like(const char* name, T& value)
 {
-    ImGuiID guard{name};
     bool changed = false;
-
     ImGui::Text("%s", name);
     template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
-        ImGuiID guard{index};
         changed = Input<config>(std::to_string(index).c_str(), std::get<index>(value)) || changed;
     }
-
     return changed;
 }
 
 template <Config config, tuple_like T>
 bool render_tuple_like(const char* name, const T& value)
 {
-    ImGuiID guard{name};
-
     ImGui::Text("%s", name);
     template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
-        ImGuiID guard{index};
         Input<config>(std::to_string(index).c_str(), std::get<index>(value));
     }
-
     return false;
 }
 
@@ -537,9 +530,7 @@ struct Renderer<config, T>
 {
     static bool Render(const char* name, T& x)
     {
-        ImGuiID guard{name};
         bool changed = false;
-
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : detail::nsdm_of(^^T)) {
                 constexpr auto attns = detail::get_all_attns(^^T, member);
@@ -567,8 +558,6 @@ struct Renderer<config, T>
 
     static bool Render(const char* name, const T& x)
     {
-        ImGuiID guard{name};
-
         if (TreeNodeExNoDisable(name)) {
             template for (constexpr auto member : detail::nsdm_of(^^T)) {
                 constexpr auto attns = detail::get_all_attns(^^T, member);
@@ -596,7 +585,6 @@ struct Renderer<config, T>
 {
     static bool Render(const char* name, T& value)
     {
-        ImGuiID guard{name};
         bool changed = false;
         if constexpr (config.HasAttn<Radio>()) {
             ImGui::Text("%s", name);
@@ -863,9 +851,7 @@ struct Renderer<config, std::optional<T>>
 {
     static bool Render(const char* name, std::optional<T>& value)
     {
-        ImGuiID guard{name};
         bool changed = false;
-
         const ImGuiStyle& style = ImGui::GetStyle();
         if (value.has_value()) {
             bool should_remove = false;
@@ -894,8 +880,6 @@ struct Renderer<config, std::optional<T>>
 
     static bool Render(const char* name, const std::optional<T>& value)
     {
-        ImGuiID guard{name};
-
         const ImGuiStyle& style = ImGui::GetStyle();
         if (value.has_value()) {
             ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
@@ -912,7 +896,6 @@ struct Renderer<config, std::variant<Ts...>>
 {
     static bool Render(const char* name, std::variant<Ts...>& value)
     {
-        ImGuiID guard{name};
         const ImGuiStyle& style = ImGui::GetStyle();
 
         static const char* type_names[] = { display_string_of(^^Ts).data()... };
@@ -943,7 +926,6 @@ struct Renderer<config, std::variant<Ts...>>
 
     static bool Render(const char* name, const std::variant<Ts...>& value)
     {
-        ImGuiID guard{name};
         ImGui::BeginDisabled();
         const ImGuiStyle& style = ImGui::GetStyle();
 
@@ -1033,9 +1015,7 @@ struct Renderer<config, std::bitset<N>>
 {
     static bool Render(const char* name, std::bitset<N>& value)
     {
-        ImGuiID id{name};
         ImGui::Text("%s", name);
-
         bool changed = false;
         template for (constexpr auto i : detail::integer_sequence(N)) {
             bool proxy = value[i];
@@ -1048,9 +1028,7 @@ struct Renderer<config, std::bitset<N>>
 
     static bool Render(const char* name, const std::bitset<N>& value)
     {
-        ImGuiID id{name};
         ImGui::Text("%s", name);
-
         template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
             Input<config>(std::format("[{}]", i).c_str(), value[i]);
@@ -1080,7 +1058,6 @@ struct Renderer<config, std::complex<T>>
 {
     static bool Render(const char* name, std::complex<T>& value)
     {
-        ImGuiID id{name};
         ImGui::Text("%s", name);
         bool changed = false;
         T real = value.real();
