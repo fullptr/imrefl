@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <expected>
+#include <chrono>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -35,7 +36,7 @@ enum class weapon
 
 struct player
 {
-    std::expected<int, std::string> value = 5;
+    std::chrono::system_clock::time_point my_time = std::chrono::system_clock::now();
 };
 
 

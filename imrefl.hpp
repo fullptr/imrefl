@@ -5,6 +5,7 @@
 #include <imgui_internal.h>
 
 #include <bitset>
+#include <chrono>
 #include <complex>
 #include <concepts>
 #include <expected>
@@ -1191,6 +1192,163 @@ struct Renderer<config, std::complex<T>>
     static bool Render(const char* name, const std::complex<T>& value)
     {
         return DelegateToNonConst<config>(name, value);
+    }
+};
+
+template <Config config>
+struct Renderer<config, std::chrono::year_month_day>
+{
+    namespace sc = std::chrono;
+    using Ymd = std::chrono::year_month_day;
+
+    static bool Render(const char* name, Ymd& value)
+    {
+        bool changed = false;
+
+        int year  = (int)value.year();
+        int month = (unsigned)value.month();
+        int day   = (unsigned)value.day();
+
+        ImGui::Text("%s", name);
+        ImGui::SameLine();
+
+        const float num_width = ImGui::CalcTextSize("00000").x;
+        const float style     = ImGui::GetStyle().ItemSpacing.x;
+
+        ImGui::SetNextItemWidth(num_width + 10.f); // bit wider looks better
+        changed |= ImGui::DragInt("##year", &year, 1.0f);
+
+        ImGui::SameLine(0, 2.0f);
+        ImGui::Text("-");
+        ImGui::SameLine(0, 2.0f);
+
+        ImGui::SetNextItemWidth(num_width);
+        changed |= ImGui::DragInt("##month", &month, 1.0f, 1, 12, "%02d");
+
+        ImGui::SameLine(0, 2.0f);
+        ImGui::Text("-");
+        ImGui::SameLine(0, 2.0f);
+
+        ImGui::SetNextItemWidth(num_width);
+        changed |= ImGui::DragInt("##day", &day, 1.0f, 1, 31, "%02d");
+
+        if (changed) {
+            month = std::clamp(month, 1,  12);
+            day   = std::clamp(day,   1,  31);
+            value = Ymd{sc::year{year}, sc::month{(unsigned)month}, sc::day{(unsigned)day}};
+
+            // clamp to a valid calendar date (such as Feb 30th -> Feb 28th)
+            if (!value.ok()) {
+                value = value.year() / value.month() / sc::last;
+            }
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const Ymd& value)
+    {
+        return DelegateToNonConst<config>(name, value);                 
+    }
+};
+
+template <Config config, typename Duration>
+struct Renderer<config, std::chrono::hh_mm_ss<Duration>>
+{
+    namespace sc = std::chrono;
+    using Hms = std::chrono::hh_mm_ss<Duration>;
+
+    // This currently strips away the subseconds and doesn't display them. We may
+    // want to change this in the future if needed.
+    static bool Render(const char* name, Hms& value)
+    {
+        bool changed = false;
+
+        ImGui::Text("%s", name);
+        ImGui::SameLine();
+
+        const float num_width = ImGui::CalcTextSize("00000").x;
+        const float style     = ImGui::GetStyle().ItemSpacing.x;
+
+        int hour = value.hours().count();
+        ImGui::SetNextItemWidth(num_width);
+        changed |= ImGui::DragInt("##hour", &hour, 1.f, 0, 23, "%02d");
+
+        ImGui::SameLine(0, 2.0f);
+        ImGui::Text(":");
+        ImGui::SameLine(0, 2.0f);
+
+        int min = value.minutes().count();
+        ImGui::SetNextItemWidth(num_width);
+        changed |= ImGui::DragInt("##min", &min, 1.f, 0, 59, "%02d");
+
+        ImGui::SameLine(0, 2.0f);
+        ImGui::Text(":");
+        ImGui::SameLine(0, 2.0f);
+
+        int sec = value.seconds().count();
+        ImGui::SetNextItemWidth(num_width);
+        changed |= ImGui::DragInt("##sec", &sec, 1.f, 0, 59, "%02d");
+
+        if (changed) {
+            hour  = std::clamp(hour,  0,  23);
+            min   = std::clamp(min,   0,  59);
+            sec   = std::clamp(sec,   0,  59);
+            value = Hms{sc::hours{hour} + sc::minutes{min} + sc::seconds{sec}};
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const Hms& value)
+    {
+        return DelegateToNonConst<config>(name, value);                 
+    }
+};
+
+template <Config config, typename Clock, typename Duration>
+struct Renderer<config, std::chrono::time_point<Clock, Duration>>
+{
+    using TimePoint = std::chrono::time_point<Clock, Duration>;
+    using Ymd = std::chrono::year_month_day;
+    using Hms = std::chrono::hh_mm_ss<Duration>;
+
+    static std::pair<Ymd, Hms> Split(const TimePoint& value)
+    {
+        auto since_epoch = value.time_since_epoch();
+        auto day_count   = std::chrono::floor<std::chrono::days>(since_epoch);
+        auto time_of_day = since_epoch - day_count;
+        return {Ymd{std::chrono::sys_days{day_count}}, Hms{time_of_day}};
+    }
+
+    static bool Render(const char* name, TimePoint& value)
+    {
+        auto [ymd, hms] = Split(value);
+        ImGui::Text("%s", name);
+        ImGui::SameLine();
+        bool changed = false;
+        changed |= Input("", ymd);
+        ImGui::SameLine();
+        changed |= Input("", hms);
+
+        if (changed) {
+            value = TimePoint{std::chrono::sys_days{ymd}.time_since_epoch() + hms.to_duration()};
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const TimePoint& value)
+    {
+        const auto [ymd, hms] = Split(value);
+        ImGui::BeginDisabled();
+        ImGui::Text("%s", name);
+        ImGui::SameLine();
+        Input("", ymd);
+        ImGui::SameLine();
+        Input("", hms);
+        ImGui::EndDisabled();
+        return false;
     }
 };
 
