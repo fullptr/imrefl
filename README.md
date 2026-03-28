@@ -64,6 +64,10 @@ That's it! No macros or other setup needed!
     * This is always read-only.
 * `std::complex<T>`.
 * `std::expected<T, E>`.
+* Partial `std::chrono` support:
+    * `std::chrono::time_point<Clock, Duration>`.
+    * `std::chrono::year_month_day`.
+    * `std::chrono::hh_mm_ss<Duration>`.
 
 #### `imrefl_glm.hpp`
 * All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
@@ -181,3 +185,4 @@ target_link_libraries(example PRIVATE ImRefl)
 * All reasonable standard library types (for some definition of reasonable).
 * More annotations for other ImGui visual styles and customisation points.
 * Properly document all supported types and customization points.
+* Use of existing annotations on supported types that make sense.

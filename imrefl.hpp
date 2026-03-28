@@ -1198,11 +1198,11 @@ struct Renderer<config, std::complex<T>>
 template <Config config>
 struct Renderer<config, std::chrono::year_month_day>
 {
-    namespace sc = std::chrono;
     using Ymd = std::chrono::year_month_day;
 
     static bool Render(const char* name, Ymd& value)
     {
+        namespace sc = std::chrono;
         bool changed = false;
 
         int year  = (int)value.year();
@@ -1233,8 +1233,8 @@ struct Renderer<config, std::chrono::year_month_day>
         changed |= ImGui::DragInt("##day", &day, 1.0f, 1, 31, "%02d");
 
         if (changed) {
-            month = std::clamp(month, 1,  12);
-            day   = std::clamp(day,   1,  31);
+            month = std::clamp(month, 1, 12);
+            day   = std::clamp(day,   1, 31);
             value = Ymd{sc::year{year}, sc::month{(unsigned)month}, sc::day{(unsigned)day}};
 
             // clamp to a valid calendar date (such as Feb 30th -> Feb 28th)
@@ -1255,13 +1255,13 @@ struct Renderer<config, std::chrono::year_month_day>
 template <Config config, typename Duration>
 struct Renderer<config, std::chrono::hh_mm_ss<Duration>>
 {
-    namespace sc = std::chrono;
     using Hms = std::chrono::hh_mm_ss<Duration>;
 
     // This currently strips away the subseconds and doesn't display them. We may
     // want to change this in the future if needed.
     static bool Render(const char* name, Hms& value)
     {
+        namespace sc = std::chrono;
         bool changed = false;
 
         ImGui::Text("%s", name);
@@ -1291,9 +1291,9 @@ struct Renderer<config, std::chrono::hh_mm_ss<Duration>>
         changed |= ImGui::DragInt("##sec", &sec, 1.f, 0, 59, "%02d");
 
         if (changed) {
-            hour  = std::clamp(hour,  0,  23);
-            min   = std::clamp(min,   0,  59);
-            sec   = std::clamp(sec,   0,  59);
+            hour  = std::clamp(hour, 0, 23);
+            min   = std::clamp(min,  0, 59);
+            sec   = std::clamp(sec,  0, 59);
             value = Hms{sc::hours{hour} + sc::minutes{min} + sc::seconds{sec}};
         }
 

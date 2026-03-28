@@ -34,9 +34,12 @@ enum class weapon
     axe
 };
 
+using namespace std::chrono_literals;
+
 struct player
 {
-    std::chrono::system_clock::time_point my_time = std::chrono::system_clock::now();
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::chrono::year_month_day birthday = {1995y, std::chrono::March, 5d};
 };
 
 
