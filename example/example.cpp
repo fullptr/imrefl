@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <map>
 #include <vector>
+#include <expected>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -32,26 +33,9 @@ enum class weapon
     axe
 };
 
-struct Foo
-{
-    int x;
-    explicit Foo(int y) : x{y} {}
-};
-
-template <ImRefl::Config config>
-struct ImRefl::Renderer<config, Foo>
-{
-    static bool Render(const char* name, Foo& f) {
-        return ImRefl::Input(name, f.x);
-    }
-    static bool Render(const char* name, const Foo& f) {
-        return ImRefl::Input(name, f.x);
-    }
-};
-
 struct player
 {
-    std::vector<Foo> d = { Foo{1}, Foo{2} };
+    std::expected<int, std::string> value = 5;
 };
 
 
