@@ -198,7 +198,7 @@ concept tuple_like = requires {
 template <typename T>
 concept is_map_type =
     std::ranges::forward_range<T> &&
-    requires(T t) {
+    requires {
         typename T::key_type;
         typename T::mapped_type;
     } &&
@@ -210,8 +210,9 @@ concept is_map_type =
 
 template <typename T>
 concept is_set_type =
+    !is_map_like<T> &&
     std::ranges::forward_range<T> &&
-    requires(T t) {
+    requires {
         typename T::key_type;
     } &&
     std::default_initializable<typename T::key_type> &&
