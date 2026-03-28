@@ -210,7 +210,7 @@ concept is_map_type =
 
 template <typename T>
 concept is_set_type =
-    !is_map_like<T> &&
+    !is_map_type<T> &&
     std::ranges::forward_range<T> &&
     requires {
         typename T::key_type;
@@ -263,7 +263,7 @@ consteval auto enums_of(std::meta::info type)
     return std::define_static_array(enumerators_of(type));
 }
 
-template <detail::scoped_enum T>
+template <scoped_enum T>
 constexpr const char* enum_to_string(T value)
 {
     template for (constexpr auto e : enums_of(^^T)) {
@@ -378,12 +378,12 @@ bool render_range_element(const char* name, std::size_t i, R& range, std::ranges
         const float selectableWidth = ImGui::CalcTextSize(index_name).x;
         ImGui::Selectable(index_name, false, ImGuiSelectableFlags_None, {selectableWidth, 0});
         if (ImGui::BeginDragDropSource()) {
-            ImGui::SetDragDropPayload(name, &i, sizeof(size_t));
+            ImGui::SetDragDropPayload(name, &i, sizeof(std::size_t));
             ImGui::EndDragDropSource();
         }
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(name)) {
-                const size_t index = *(const size_t*)payload->Data;
+                const std::size_t index = *(const std::size_t*)payload->Data;
                 if (index != i) std::swap(range[index], element);
             }
             ImGui::EndDragDropTarget();
@@ -393,7 +393,7 @@ bool render_range_element(const char* name, std::size_t i, R& range, std::ranges
         changed = Input<config>(index_name, element);
     }
 
-    if constexpr (detail::can_erase<R>) {
+    if constexpr (can_erase<R>) {
         ImGui::SameLine();
         if (square_button(fmt("-##e{}", i))) {
             it = range.erase(it);
@@ -452,17 +452,17 @@ bool render_forward_range(const char* name, R& range)
 
     bool changed = false;
 
-    if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_front<R>) {
+    if constexpr (!config.HasAttn<NonResizable>() && can_push_pop_front<R>) {
         changed |= render_push_pop_front(range);
     }
 
-    size_t i = 0;
+    std::size_t i = 0;
     for (auto it = range.begin(); it != range.end();) {
         changed |= render_range_element<config>(name, i, range, it);
         ++i;
     }
 
-    if constexpr (!config.HasAttn<NonResizable>() && detail::can_push_pop_back<R>) {
+    if constexpr (!config.HasAttn<NonResizable>() && can_push_pop_back<R>) {
         changed |= render_push_pop_back(range);
     }
 
@@ -493,7 +493,7 @@ template <Config config, std::ranges::forward_range R>
 bool render_forward_range(const char* name, const R& range)
 {
     if (TreeNodeExNoDisable(name)) {
-        size_t i = 0;
+        std::size_t i = 0;
         for (auto& element : range) {
             Input<config>(fmt("[{}]", i), element); 
             ++i;
@@ -503,7 +503,7 @@ bool render_forward_range(const char* name, const R& range)
     return false; 
 }
 
-template <Config config, detail::scalar T>
+template <Config config, scalar T>
 bool render_scalar_n(const char* name, T* val, std::size_t count)
 {
     static_assert(!(config.HasAttn<Slider>() && config.HasAttn<Drag>()), "too many visual styles given for scalar type");
@@ -511,21 +511,21 @@ bool render_scalar_n(const char* name, T* val, std::size_t count)
     if constexpr (constexpr auto style = config.FetchAttn<Slider>()) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
-        return ImGui::SliderScalarN(name, detail::num_type<T>(), val, count, &min, &max);
+        return ImGui::SliderScalarN(name, num_type<T>(), val, count, &min, &max);
     }
     else if constexpr (constexpr auto style = config.FetchAttn<Drag>()) {
         const auto min = static_cast<T>(style->min);
         const auto max = static_cast<T>(style->max);
         const auto speed = style->speed;
-        return ImGui::DragScalarN(name, detail::num_type<T>(), val, count, speed, &min, &max);
+        return ImGui::DragScalarN(name, num_type<T>(), val, count, speed, &min, &max);
     }
     else {
         const T step = 1; // Only used for integral types
-        return ImGui::InputScalarN(name, detail::num_type<T>(), val, count, &step);
+        return ImGui::InputScalarN(name, num_type<T>(), val, count, &step);
     }
 }
 
-template <Config config, detail::scalar T>
+template <Config config, scalar T>
 bool render_scalar_n(const char* name, const T* val, std::size_t count)
 {
     ImGui::BeginGroup();
@@ -545,7 +545,7 @@ bool render_tuple_like(const char* name, T& value)
 {
     bool changed = false;
     ImGui::Text("%s", name);
-    template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
+    template for (constexpr auto index : integer_sequence(tuple_size(^^T))) {
         changed = Input<config>(fmt("##{}", index), std::get<index>(value)) || changed;
     }
     return changed;
@@ -555,10 +555,28 @@ template <Config config, tuple_like T>
 bool render_tuple_like(const char* name, const T& value)
 {
     ImGui::Text("%s", name);
-    template for (constexpr auto index : detail::integer_sequence(tuple_size(^^T))) {
+    template for (constexpr auto index : integer_sequence(tuple_size(^^T))) {
         Input<config>(fmt("##{}", index), std::get<index>(value));
     }
     return false;
+}
+
+// Returns the size of a button for the given text
+ImVec2 button_size(const char* text)
+{
+    const auto text_size = ImGui::CalcTextSize(text);
+    const auto padding = ImGui::GetStyle().FramePadding;
+    return { text_size.x + padding.x * 2, text_size.y + padding.y * 2 };
+}
+
+template <typename... Ts>
+consteval bool all_types_default_initializable()
+{
+    for (const auto type : {^^Ts...}) {
+        const auto check = substitute(^^std::default_initializable, {type});
+        if (!extract<bool>(check)) return false; 
+    }
+    return true;
 }
 
 } // namespace detail
@@ -897,24 +915,28 @@ struct Renderer<config, std::optional<T>>
         const ImGuiStyle& style = ImGui::GetStyle();
         if (value.has_value()) {
             bool should_remove = false;
-            if (ImGui::Button("Remove")) {
-                should_remove = true;
+            if constexpr (std::default_initializable<T>) {
+                if (ImGui::Button("Remove")) {
+                    should_remove = true;
+                }
+                ImGui::SameLine(0, style.ItemInnerSpacing.x);
             }
 
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
             ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
             changed = Input<config>(name, *value) || should_remove;
 
             if (should_remove) {
-                value = {};     // Delay this so as not to pass invalid memory to Render
+                value = {}; // Delay this so as not to pass invalid memory to Render
             }
         } else {
-            if (ImGui::Button("Add", {ImGui::CalcItemWidth(), ImGui::GetFrameHeight()})) {
-                value.emplace();
-                changed = true;
+            if constexpr (std::default_initializable<T>) {
+                if (ImGui::Button("Add", detail::button_size("Remove"))) {
+                    value.emplace();
+                    changed = true;
+                }
+                ImGui::SameLine(0, style.ItemInnerSpacing.x);
             }
-            ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            ImGui::Text("%s", name);
+            ImGui::Text("%s: <nullopt>", name);
         }
 
         return changed;
@@ -936,31 +958,33 @@ struct Renderer<config, std::optional<T>>
 template <Config config, typename... Ts>
 struct Renderer<config, std::variant<Ts...>>
 {
+    static constexpr const char* type_names[] = { display_string_of(^^Ts).data()... };
+
     static bool Render(const char* name, std::variant<Ts...>& value)
     {
-        const ImGuiStyle& style = ImGui::GetStyle();
-
-        static const char* type_names[] = { display_string_of(^^Ts).data()... };
         bool changed = false;
 
-        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
-        if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
-            template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
-                ImGui::PushID(index);
-                if (ImGui::Selectable(type_names[index])) {
-                    value.template emplace<index>();
-                    changed = true;
+        if constexpr (detail::all_types_default_initializable<Ts...>()) {
+            const ImGuiStyle& style = ImGui::GetStyle();
+            ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
+            if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
+                template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
+                    ImGui::PushID(index);
+                    if (ImGui::Selectable(type_names[index])) {
+                        value.template emplace<index>();
+                        changed = true;
+                    }
+                    ImGui::PopID();
                 }
-                ImGui::PopID();
+                ImGui::EndCombo();
             }
-            ImGui::EndCombo();
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
         }
-        
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
         template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {
             if (index == value.index()) {
-                changed = Input<config>(name, std::get<index>(value)) || changed;
+                changed |= Input<config>(name, std::get<index>(value));
             }
         }
 
@@ -971,8 +995,6 @@ struct Renderer<config, std::variant<Ts...>>
     {
         ImGui::BeginDisabled();
         const ImGuiStyle& style = ImGui::GetStyle();
-
-        static const char* type_names[] = { display_string_of(^^Ts).data()... };
 
         ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
         if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {

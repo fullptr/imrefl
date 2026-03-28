@@ -25,7 +25,7 @@ That's it! No macros or other setup needed!
     * `char` is treated as a character rather than an 8 bit integer. 
     * `long double` is treated as a `double` as it is not supported by ImGui out of the box.
 * `T*`.
-    * Shows the pointed-at value (or "nullptr").
+    * Shows the pointed-at value (or <nullptr>").
     * The value can be changed, but the pointer cannot be reassigned.
 * `T[N]` (C-style arrays).
 * `std::array<T, N>`.
@@ -35,7 +35,11 @@ That's it! No macros or other setup needed!
 * `std::pair<L, R>`.
 * `std::tuple<Ts...>`.
 * `std::optional<T>`.
+    * Displays the inner value or "<nullopt>".
+    * If `T` is default initializable, the optional can also be disengaged and reengaged.
 * `std::variant<Ts...>`.
+    * Displays the inner value.
+    * Only allows for changing the contained type if all inner types are default initializable.
 * All containers satisfying `std::ranges::forward_range`, notably:
     * `std::vector<T>`.
     * `std::deque<T>`.
@@ -175,3 +179,4 @@ target_link_libraries(example PRIVATE ImRefl)
 ## Future work
 * All reasonable standard library types (for some definition of reasonable).
 * More annotations for other ImGui visual styles and customisation points.
+* Properly document all supported types and customization points.
