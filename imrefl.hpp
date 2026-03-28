@@ -1019,6 +1019,54 @@ struct Renderer<config, std::variant<Ts...>>
     }
 };
 
+template <Config config, typename T, typename E>
+struct Renderer<config, std::expected<T, E>>
+{
+    static bool Render(const char* name, std::expected<T, E>& value)
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        bool changed = false;
+
+        if constexpr (detail::all_types_default_initializable<T, E>()) {
+            ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
+            if (ImGui::BeginCombo("##combo_box", value.has_value() ? "value" : "error")) {
+                if (ImGui::Selectable("value")) {
+                    value = T{};
+                    changed = true;
+                }
+                if (ImGui::Selectable("error")) {
+                    value = std::unexpected(E{});
+                    changed = true;
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        }
+
+        ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
+        if (value.has_value()) {
+            changed |= Input<config>(name, value.value());
+        } else {
+            changed |= Input<config>(name, value.error());
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const std::expected<T, E>& value)
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+
+        if (value.has_value()) {
+            Input<config>(name, value.value());
+        } else {
+            Input<config>(name, value.error());
+        }
+
+        return false;
+    }
+};
+
 template <Config config, std::ranges::forward_range R>
 struct Renderer<config, R>
 {
