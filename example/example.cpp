@@ -35,8 +35,7 @@ enum class weapon
 
 struct player
 {
-    const std::expected<int, std::string> value = 5;
-    std::expected<int, std::string> value2 = 5;
+    std::expected<int, std::string> value = 5;
 };
 
 

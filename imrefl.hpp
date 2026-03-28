@@ -7,6 +7,7 @@
 #include <bitset>
 #include <complex>
 #include <concepts>
+#include <expected>
 #include <format>
 #include <functional>
 #include <memory>
