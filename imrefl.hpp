@@ -962,10 +962,10 @@ struct Renderer<config, std::variant<Ts...>>
 
     static bool Render(const char* name, std::variant<Ts...>& value)
     {
+        const ImGuiStyle& style = ImGui::GetStyle();
         bool changed = false;
 
         if constexpr (detail::all_types_default_initializable<Ts...>()) {
-            const ImGuiStyle& style = ImGui::GetStyle();
             ImGui::SetNextItemWidth(ImGui::CalcItemWidth() / 3 - style.ItemInnerSpacing.x);
             if (ImGui::BeginCombo("##combo_box", type_names[value.index()])) {
                 template for (constexpr auto index : detail::integer_sequence(sizeof...(Ts))) {

@@ -32,10 +32,28 @@ enum class weapon
     axe
 };
 
+struct Foo
+{
+    int x;
+    explicit Foo(int y) : x{y} {}
+};
+
+template <ImRefl::Config config>
+struct ImRefl::Renderer<config, Foo>
+{
+    static bool Render(const char* name, Foo& f) {
+        return ImRefl::Input(name, f.x);
+    }
+    static bool Render(const char* name, const Foo& f) {
+        return ImRefl::Input(name, f.x);
+    }
+};
+
 struct player
 {
-    std::set<int> data = {1, 2, 3, 4, 5, 6};
+    std::vector<Foo> d = { Foo{1}, Foo{2} };
 };
+
 
 int main()
 {
