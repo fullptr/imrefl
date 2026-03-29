@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <expected>
+#include <chrono>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -33,9 +34,12 @@ enum class weapon
     axe
 };
 
+using namespace std::chrono_literals;
+
 struct player
 {
-    std::expected<int, std::string> value = 5;
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::chrono::year_month_day birthday = {1995y, std::chrono::March, 5d};
 };
 
 
