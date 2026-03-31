@@ -38,8 +38,12 @@ using namespace std::chrono_literals;
 
 struct player
 {
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-    std::chrono::year_month_day birthday = {1995y, std::chrono::March, 5d};
+    [[=ImRefl::slider(0, 20)]]
+    std::chrono::duration<float, std::nano>
+        float_duration = std::chrono::duration<float, std::nano>{12.0f};
+
+    std::chrono::seconds num_secs = std::chrono::seconds{10};
+    std::chrono::years age = std::chrono::years{31};
 };
 
 

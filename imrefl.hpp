@@ -581,6 +581,23 @@ consteval bool all_types_default_initializable()
     return true;
 }
 
+template <typename Period>
+consteval const char* period_name()
+{
+    namespace sc = std::chrono;
+    if      constexpr (std::is_same_v<Period, std::nano>)            return "nanoseconds";
+    else if constexpr (std::is_same_v<Period, std::micro>)           return "microseconds";
+    else if constexpr (std::is_same_v<Period, std::milli>)           return "milliseconds";
+    else if constexpr (std::is_same_v<Period, std::ratio<1>>)        return "seconds";
+    else if constexpr (std::is_same_v<Period, std::ratio<60>>)       return "minutes";
+    else if constexpr (std::is_same_v<Period, std::ratio<3600>>)     return "hours";
+    else if constexpr (std::is_same_v<Period, std::ratio<86400>>)    return "days";
+    else if constexpr (std::is_same_v<Period, std::ratio<604800>>)   return "weeks";
+    else if constexpr (std::is_same_v<Period, std::ratio<2629746>>)  return "months";
+    else if constexpr (std::is_same_v<Period, std::ratio<31556952>>) return "years";
+    else return "[?]";  // TODO: When we have constexpr std::format, print the ratio
+}
+
 } // namespace detail
 
 // ============================================================================
@@ -1349,6 +1366,37 @@ struct Renderer<config, std::chrono::time_point<Clock, Duration>>
         Input("", hms);
         ImGui::EndDisabled();
         return false;
+    }
+};
+
+template <Config config, typename Rep, typename Period>
+struct Renderer<config, std::chrono::duration<Rep, Period>>
+{
+    using Duration = std::chrono::duration<Rep, Period>;
+    static constexpr const char* period_name = detail::period_name<Period>();
+
+    static bool Render(const char* name, Duration& value)
+    {
+        bool changed = false;
+
+        Rep count = value.count();
+        if (Input<config>(name, count)) {
+            value = Duration{count};
+            changed = true;
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::Text("Unit: %s", period_name);
+            ImGui::EndTooltip();
+        }
+
+        return changed;
+    }
+
+    static bool Render(const char* name, const Duration& value)
+    {
+        return DelegateToNonConst<config>(name, value);
     }
 };
 
