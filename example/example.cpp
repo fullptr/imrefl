@@ -39,10 +39,11 @@ using namespace std::chrono_literals;
 struct player
 {
     [[=ImRefl::slider(0, 20)]]
-    std::chrono::duration<float> float_duration = std::chrono::duration<float>{12.0f};
+    std::chrono::duration<float, std::nano>
+        float_duration = std::chrono::duration<float, std::nano>{12.0f};
+
     std::chrono::seconds num_secs = std::chrono::seconds{10};
-    std::chrono::hours age = std::chrono::hours{31};
-    std::chrono::milliseconds num_millis = std::chrono::milliseconds{12};
+    std::chrono::years age = std::chrono::years{31};
 };
 
 

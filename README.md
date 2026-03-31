@@ -66,6 +66,7 @@ That's it! No macros or other setup needed!
 * `std::expected<T, E>`.
 * Partial `std::chrono` support:
     * `std::chrono::time_point<Clock, Duration>`.
+    * `std::chrono::duration<Rep, Period>`.
     * `std::chrono::year_month_day`.
     * `std::chrono::hh_mm_ss<Duration>`.
 
