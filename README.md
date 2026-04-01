@@ -19,7 +19,7 @@ That's it! No macros or other setup needed!
 ### Supported types
 #### `imrefl.hpp`
 * Aggregate structs.
-* Enum classes.
+* All enumeration types (both C-style `num` and C++ scoped `enum class`).
 * All arithmetic types.
     * `bool` is rendered as a checkbox.
     * `char` is treated as a character rather than an 8 bit integer. 

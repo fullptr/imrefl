@@ -163,7 +163,7 @@ template <typename T>
 concept scalar = is_arithmetic_type(^^T) && (^^T != ^^bool);
 
 template <typename T>
-concept scoped_enum = is_scoped_enum_type(^^T);
+concept enumeration = is_enum_type(^^T);  // includes scoped enums
 
 template <typename T>
 concept aggregate = is_aggregate_type(^^T);
@@ -265,7 +265,7 @@ consteval auto enums_of(std::meta::info type)
     return std::define_static_array(enumerators_of(type));
 }
 
-template <scoped_enum T>
+template <enumeration T>
 constexpr const char* enum_to_string(T value)
 {
     template for (constexpr auto e : enums_of(^^T)) {
@@ -659,7 +659,7 @@ struct Renderer<config, T>
     }
 };
 
-template <Config config, detail::scoped_enum T>
+template <Config config, detail::enumeration T>
 struct Renderer<config, T>
 {
     static bool Render(const char* name, T& value)
