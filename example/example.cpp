@@ -34,18 +34,18 @@ enum class weapon
     axe
 };
 
-using namespace std::chrono_literals;
+enum colour
+{
+    green,
+    blue,
+    red
+};
 
 struct player
 {
-    [[=ImRefl::slider(0, 20)]]
-    std::chrono::duration<float, std::nano>
-        float_duration = std::chrono::duration<float, std::nano>{12.0f};
-
-    std::chrono::seconds num_secs = std::chrono::seconds{10};
-    std::chrono::years age = std::chrono::years{31};
+    weapon current = weapon::wand;
+    colour col = green;
 };
-
 
 int main()
 {
