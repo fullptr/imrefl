@@ -2,11 +2,21 @@ find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 include(FetchContent)
-FetchContent_Declare(
-  imgui
-  GIT_REPOSITORY https://github.com/ocornut/imgui.git
-)
-message("Fetching ImGui...")
+option(IMGUI_SOURCE_DIR "Path to imgui source" "")
+
+if(IMGUI_SOURCE_DIR)
+  message(STATUS "Using local ImGui source from ${IMGUI_SOURCE_DIR}")
+  FetchContent_Declare(
+    imgui
+    SOURCE_DIR ${IMGUI_SOURCE_DIR}
+  )
+else()
+  message(STATUS "Fetching ImGui from git repository")
+  FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  )
+endif()
 FetchContent_MakeAvailable(imgui)
 
 set(IMGUI_SRC
@@ -47,3 +57,5 @@ target_link_libraries(imrefl-example PRIVATE
   glfw
   ImRefl
 )
+
+install(TARGETS imrefl-example DESTINATION ${CMAKE_INSTALL_BINDIR})
