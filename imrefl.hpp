@@ -111,8 +111,13 @@ consteval Separator separator(std::string_view title = "") { return {std::define
 struct BeginRegion { const char* title; };
 consteval BeginRegion begin_region(std::string_view title) { return {std::define_static_string(title)}; }
 
-struct EndRegion {};
-inline static constexpr EndRegion end_region {};
+enum class EndRegionMode
+{
+    single,
+    all
+};
+struct EndRegion { EndRegionMode mode; };
+constexpr EndRegion end_region(EndRegionMode mode = EndRegionMode::single) { return {mode}; }
 
 struct Color {};
 inline static constexpr Color color {};
@@ -624,30 +629,36 @@ struct Renderer<config, T>
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (new_config.HasAttn<EndRegion>()) {
-                    if (region_states.top()) {
-                        ImGui::TreePop();
+                    while (!region_states.empty()) {
+                        if (region_states.top()) {
+                            ImGui::TreePop();
+                        }
+                        region_states.pop();
+
+                        if (new_config.FetchAttn<EndRegion>()->mode == EndRegionMode::single) {
+                            break;
+                        }
                     }
-                    region_states.pop();
                 }
                 if constexpr (new_config.HasAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
                         region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                    } else {
+                        region_states.push(false);
                     }
                 }
 
                 if constexpr (!new_config.HasAttn<Ignore>()) {
-                    if (region_states.size() > 0 && region_states.top() == false) {
-                        continue;
-                    }
+                    if (region_states.empty() || region_states.top()) {
+                        if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                            ImGui::SeparatorText(separator->title);
+                        }
 
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
-                    }
-
-                    if constexpr (new_config.HasAttn<Readonly>()) {
-                        Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
-                    } else {
-                        changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
+                        if constexpr (new_config.HasAttn<Readonly>()) {
+                            Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
+                        } else {
+                            changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
+                        }
                     }
                 }
             }
@@ -674,14 +685,22 @@ struct Renderer<config, T>
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (new_config.HasAttn<EndRegion>()) {
-                    if (region_states.top()) {
-                        ImGui::TreePop();
+                    while (!region_states.empty()) {
+                        if (region_states.top()) {
+                            ImGui::TreePop();
+                        }
+                        region_states.pop();
+
+                        if (new_config.FetchAttn<EndRegion>()->mode == EndRegionMode::single) {
+                            break;
+                        }
                     }
-                    region_states.pop();
                 }
                 if constexpr (new_config.HasAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
                         region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                    } else {
+                        region_states.push(false);
                     }
                 }
 
