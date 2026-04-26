@@ -88,7 +88,9 @@ That's it! No macros or other setup needed!
 | `ImRefl::radio` | For enum classes. Displays the enum as a series of radio buttons rather than a dropdown. |
 | `ImRefl::in_line` | By default, array-like values are show with each element on a separate line. However, for types such as `float[3]` representing a position, it may be desirable to show them on a single line, which this annotation is for. |
 | `ImRefl::non_resizeable` | For dynamic arrays, this annotation disables the ability to add and remove elements. |
-| `ImRefl::separator(title)` | Adds an ImGui separator line with optional title above the annotated field. | 
+| `ImRefl::separator(title)` | Adds an ImGui separator line with optional title above the annotated field. |
+| `ImRefl::begin_region(title)` | Adds a collapsable region within an aggregate. |
+| `ImRefl::end_region(levels)` | Closes a collapsable region; defaults to 1 level, 0 is used to close all nested regions in the stack. | 
 
 ### Third-party types
 It is possible to implement the rendering logic for custom types by providing an implementation of `ImRefl::Renderer` for your type. For example:
