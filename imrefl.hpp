@@ -704,15 +704,13 @@ struct Renderer<config, T>
                 }
 
                 if constexpr (!new_config.HasAttn<Ignore>()) {
-                    if (region_states.size() > 0 && region_states.top() == false) {
-                        continue;
+                    if (region_states.empty() || region_states.top()) {
+                        if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                            ImGui::SeparatorText(separator->title);
+                        }
+    
+                        Input<new_config>(identifier_of(member).data(), x.[:member:]);
                     }
-
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
-                    }
-
-                    Input<new_config>(identifier_of(member).data(), x.[:member:]);
                 }
             }
 
