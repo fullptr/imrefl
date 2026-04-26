@@ -111,13 +111,8 @@ consteval Separator separator(std::string_view title = "") { return {std::define
 struct BeginRegion { const char* title; };
 consteval BeginRegion begin_region(std::string_view title) { return {std::define_static_string(title)}; }
 
-enum class EndRegionMode
-{
-    single,
-    all
-};
-struct EndRegion { EndRegionMode mode; };
-constexpr EndRegion end_region(EndRegionMode mode = EndRegionMode::single) { return {mode}; }
+struct EndRegion { std::size_t levels; };
+constexpr EndRegion end_region(std::size_t levels = 1) { return {levels}; }
 
 struct Color {};
 inline static constexpr Color color {};
@@ -629,13 +624,15 @@ struct Renderer<config, T>
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (new_config.HasAttn<EndRegion>()) {
+                    std::size_t current_levels = 0;
                     while (!region_states.empty()) {
                         if (region_states.top()) {
                             ImGui::TreePop();
                         }
                         region_states.pop();
+                        ++current_levels;
 
-                        if (new_config.FetchAttn<EndRegion>()->mode == EndRegionMode::single) {
+                        if (current_levels == new_config.FetchAttn<EndRegion>()->levels) {
                             break;
                         }
                     }
@@ -685,13 +682,15 @@ struct Renderer<config, T>
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
                 if constexpr (new_config.HasAttn<EndRegion>()) {
+                    std::size_t current_levels = 0;
                     while (!region_states.empty()) {
                         if (region_states.top()) {
                             ImGui::TreePop();
                         }
                         region_states.pop();
+                        ++current_levels;
 
-                        if (new_config.FetchAttn<EndRegion>()->mode == EndRegionMode::single) {
+                        if (current_levels == new_config.FetchAttn<EndRegion>()->levels) {
                             break;
                         }
                     }
