@@ -466,7 +466,7 @@ bool render_forward_range(const char* name, R& range)
     }
 
     std::size_t i = 0;
-    for (auto it = range.begin(); it != range.end();) {
+    for (auto it = range.begin(); it != range.end(); ++it) {
         changed |= render_range_element<config>(name, i, range, it);
         ++i;
     }
