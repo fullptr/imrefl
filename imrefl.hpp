@@ -18,6 +18,7 @@
 #include <ranges>
 #include <source_location>
 #include <string>
+#include <stack>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -106,6 +107,12 @@ inline static constexpr NonResizable non_resizable {};
 
 struct Separator { const char* title; };
 consteval Separator separator(std::string_view title = "") { return {std::define_static_string(title)}; }
+
+struct BeginRegion { const char* title; };
+consteval BeginRegion begin_region(std::string_view title) { return {std::define_static_string(title)}; }
+
+struct EndRegion { std::size_t levels; };
+constexpr EndRegion end_region(std::size_t levels = 1) { return {levels}; }
 
 struct Color {};
 inline static constexpr Color color {};
@@ -611,22 +618,53 @@ struct Renderer<config, T>
     {
         bool changed = false;
         if (TreeNodeExNoDisable(name)) {
+            std::stack<bool> region_states;
             template for (constexpr auto member : detail::nsdm_of(^^T)) {
                 constexpr auto attns = detail::get_all_attns(^^T, member);
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
-                if constexpr (!new_config.HasAttn<Ignore>()) {
+                if constexpr (new_config.HasAttn<EndRegion>()) {
+                    std::size_t current_levels = 0;
+                    while (!region_states.empty()) {
+                        if (region_states.top()) {
+                            ImGui::TreePop();
+                        }
+                        region_states.pop();
+                        ++current_levels;
 
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
-                    }
-
-                    if constexpr (new_config.HasAttn<Readonly>()) {
-                        Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
-                    } else {
-                        changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
+                        if (current_levels == new_config.FetchAttn<EndRegion>()->levels) {
+                            break;
+                        }
                     }
                 }
+                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                    if (region_states.empty() || region_states.top()) {
+                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                    } else {
+                        region_states.push(false);
+                    }
+                }
+
+                if constexpr (!new_config.HasAttn<Ignore>()) {
+                    if (region_states.empty() || region_states.top()) {
+                        if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                            ImGui::SeparatorText(separator->title);
+                        }
+
+                        if constexpr (new_config.HasAttn<Readonly>()) {
+                            Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
+                        } else {
+                            changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
+                        }
+                    }
+                }
+            }
+
+            while (!region_states.empty()) {
+                if (region_states.top()) {
+                    ImGui::TreePop();
+                }
+                region_states.pop();
             }
 
             ImGui::TreePop();
@@ -638,18 +676,49 @@ struct Renderer<config, T>
     static bool Render(const char* name, const T& x)
     {
         if (TreeNodeExNoDisable(name)) {
+            std::stack<bool> region_states;
             template for (constexpr auto member : detail::nsdm_of(^^T)) {
                 constexpr auto attns = detail::get_all_attns(^^T, member);
                 constexpr auto new_config = Config{attns.data(), attns.size()};
 
-                if constexpr (!new_config.HasAttn<Ignore>()) {
+                if constexpr (new_config.HasAttn<EndRegion>()) {
+                    std::size_t current_levels = 0;
+                    while (!region_states.empty()) {
+                        if (region_states.top()) {
+                            ImGui::TreePop();
+                        }
+                        region_states.pop();
+                        ++current_levels;
 
-                    if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
-                        ImGui::SeparatorText(separator->title);
+                        if (current_levels == new_config.FetchAttn<EndRegion>()->levels) {
+                            break;
+                        }
                     }
-
-                    Input<new_config>(identifier_of(member).data(), x.[:member:]);
                 }
+                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                    if (region_states.empty() || region_states.top()) {
+                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                    } else {
+                        region_states.push(false);
+                    }
+                }
+
+                if constexpr (!new_config.HasAttn<Ignore>()) {
+                    if (region_states.empty() || region_states.top()) {
+                        if constexpr (constexpr auto separator = new_config.FetchAttn<Separator>()) {
+                            ImGui::SeparatorText(separator->title);
+                        }
+    
+                        Input<new_config>(identifier_of(member).data(), x.[:member:]);
+                    }
+                }
+            }
+
+            while (!region_states.empty()) {
+                if (region_states.top()) {
+                    ImGui::TreePop();
+                }
+                region_states.pop();
             }
 
             ImGui::TreePop();
