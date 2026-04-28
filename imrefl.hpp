@@ -410,6 +410,9 @@ bool render_range_element(const char* name, std::size_t i, R& range, std::ranges
             ++it;
         }
     }
+    else {
+        ++it;
+    }
 
     return changed;
 }
