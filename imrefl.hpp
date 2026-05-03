@@ -640,9 +640,9 @@ struct Renderer<config, T>
                         }
                     }
                 }
-                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                if constexpr (constexpr auto br = new_config.FetchAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
-                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                        region_states.push(TreeNodeExNoDisable(br->title));
                     } else {
                         region_states.push(false);
                     }
@@ -698,9 +698,9 @@ struct Renderer<config, T>
                         }
                     }
                 }
-                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                if constexpr (constexpr auto br = new_config.FetchAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
-                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                        region_states.push(TreeNodeExNoDisable(br->title));
                     } else {
                         region_states.push(false);
                     }
