@@ -640,9 +640,9 @@ struct Renderer<config, T>
                         }
                     }
                 }
-                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                if constexpr (constexpr auto br = new_config.FetchAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
-                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                        region_states.push(TreeNodeExNoDisable(br->title));
                     } else {
                         region_states.push(false);
                     }
@@ -698,9 +698,9 @@ struct Renderer<config, T>
                         }
                     }
                 }
-                if constexpr (new_config.HasAttn<BeginRegion>()) {
+                if constexpr (constexpr auto br = new_config.FetchAttn<BeginRegion>()) {
                     if (region_states.empty() || region_states.top()) {
-                        region_states.push(TreeNodeExNoDisable(new_config.FetchAttn<BeginRegion>()->title));
+                        region_states.push(TreeNodeExNoDisable(br->title));
                     } else {
                         region_states.push(false);
                     }
@@ -1225,7 +1225,7 @@ struct Renderer<config, std::bitset<N>>
         template for (constexpr auto i : detail::integer_sequence(N)) {
             bool proxy = value[i];
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            changed = Input<config>(fmt("[{}]", i), proxy) || changed;
+            changed = Input<config>(detail::fmt("[{}]", i), proxy) || changed;
             value[i] = proxy;
         }
         return changed;
@@ -1236,7 +1236,7 @@ struct Renderer<config, std::bitset<N>>
         ImGui::Text("%s", name);
         template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            Input<config>(fmt("[{}]", i), value[i]);
+            Input<config>(detail::fmt("[{}]", i), value[i]);
         }
         return false;
     }
