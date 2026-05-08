@@ -14,6 +14,7 @@
 #include <expected>
 #include <chrono>
 #include <inplace_vector>
+#include <memory>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -44,7 +45,7 @@ enum colour
 
 struct player
 {
-    std::inplace_vector<int, 5> nums = {1, 2, 3, 4, 5};
+    std::indirect<int> x = std::indirect<int>{5};
 };
 
 int main()

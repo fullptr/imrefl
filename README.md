@@ -57,6 +57,7 @@ That's it! No macros or other setup needed!
     * Supports `push_back`, `pop_back`, `push_front`, `pop_front`, `emplace` and `erase` when appropriate.
 * `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
     * Acts the same as `T*`.
+* `std::indirect<T>`.
 * `std::function<Return()>`
     * Rendered as a button. Pressing the button calls the function.
     * The return value of type `Return` is discarded.

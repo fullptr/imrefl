@@ -1196,6 +1196,20 @@ struct Renderer<config, std::unique_ptr<T, Deleter>>
     }
 };
 
+template <Config config, typename T, typename Allocator>
+struct Renderer<config, std::indirect<T, Allocator>>
+{
+    static bool Render(const char* name, std::indirect<T, Allocator>& value)
+    {
+        return Input<config>(name, *value);
+    }
+
+    static bool Render(const char* name, const std::indirect<T, Allocator>& value)
+    {
+        return Input<config>(name, *value);
+    }
+};
+
 template <Config config, typename T>
 struct Renderer<config, std::shared_ptr<T>>
 {
