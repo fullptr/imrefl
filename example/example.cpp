@@ -13,6 +13,7 @@
 #include <vector>
 #include <expected>
 #include <chrono>
+#include <inplace_vector>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -45,6 +46,7 @@ struct player
 {
     weapon current = weapon::wand;
     colour col = green;
+    std::inplace_vector<int, 10> nums = {1, 2, 3, 4, 5};
 };
 
 int main()

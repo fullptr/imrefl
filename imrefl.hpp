@@ -200,6 +200,13 @@ concept can_erase = requires(T t, typename T::const_iterator it)
 };
 
 template <typename T>
+concept has_max_size = requires(T t)
+{
+    { T::max_size() } -> std::convertible_to<std::size_t>;
+    { t.size() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename T>
 concept tuple_like = requires {
     std::tuple_size<T>::value;
 };
@@ -441,12 +448,20 @@ bool render_push_pop_back(R& range)
     if (can_push_pop_front<R> && std::ranges::empty(range)) {
         return false;
     }
-
+    
     bool changed = false;
     if (square_button("-##back") && !std::ranges::empty(range)) {
         range.pop_back();
         changed = true;
     }
+
+    // If we are at the max size, don't allow pushing a new element
+    if constexpr (detail::has_max_size<R>) {
+        if (range.size() == R::max_size()) {
+            return false;
+        }
+    }
+
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     if (square_button("+##back")) {
         range.emplace_back();
