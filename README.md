@@ -53,6 +53,7 @@ That's it! No macros or other setup needed!
     * `std::unordered_map<K, V>`.
     * `std::multimap<K, V>`.
     * `std::unordered_multimap<K, V>`.
+    * `std::inplace_vector<T, Size>`.
     * Supports `push_back`, `pop_back`, `push_front`, `pop_front`, `emplace` and `erase` when appropriate.
 * `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
     * Acts the same as `T*`.
