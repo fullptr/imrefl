@@ -224,6 +224,11 @@ concept is_map_type =
         { t.emplace(key, value) };
     };
 
+static_assert(is_map_type<std::map<int, int>>);
+static_assert(is_map_type<std::unordered_map<int, float>>);
+static_assert(!is_map_type<std::set<int>>);
+static_assert(!is_map_type<int>);
+
 template <typename T>
 concept is_set_type =
     !is_map_type<T> &&
@@ -235,6 +240,11 @@ concept is_set_type =
     requires(T t, typename T::key_type key) {
         { t.emplace(key) };
     };
+
+static_assert(is_set_type<std::set<int>>);
+static_assert(is_set_type<std::unordered_set<int>>);
+static_assert(!is_set_type<std::map<int, int>>);
+static_assert(!is_set_type<int>);
 
 // INTERNAL HELPERS
 
