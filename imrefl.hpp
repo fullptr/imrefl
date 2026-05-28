@@ -955,6 +955,16 @@ struct Renderer<config, std::span<const T>>
 };
 
 template <Config config>
+struct Renderer<config, const char*>
+{
+    static bool Render(const char* name, const char* value)
+    {
+        ImGui::Text("%s: %s", name, value);
+        return false;
+    }
+};
+
+template <Config config>
 struct Renderer<config, std::string>
 {
     static bool Render(const char* name, std::string& value)
@@ -979,8 +989,7 @@ struct Renderer<config, std::string>
 
     static bool Render(const char* name, const std::string& value)
     {
-        ImGui::Text("%s: %s", name, value.c_str());
-        return false;
+        return Renderer<config, const char*>::Render(name, value.c_str());
     }
 };
 

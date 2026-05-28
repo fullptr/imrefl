@@ -98,6 +98,14 @@ struct example
     [[=ImRefl::begin_region("Floating point")]]
     float float_;
     double double_;
+    [[=ImRefl::end_region(2)]]
+
+    [[=ImRefl::begin_region("C types")]]
+    int* raw_ptr_;
+    int* null_raw_ptr_ = nullptr;
+    float c_arr_[5];
+    [[=ImRefl::string]] char c_char_arr_[32];
+    const char* c_str_ = "This is null terminated C string";
 };
 
 int main()
@@ -132,6 +140,9 @@ int main()
 
     //player p = {};
     example ex = {};
+    int i = 714;
+    ex.raw_ptr_ = &i;
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
