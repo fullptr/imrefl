@@ -13,6 +13,8 @@
 #include <vector>
 #include <expected>
 #include <chrono>
+using namespace std::chrono_literals;
+using namespace std::chrono;
 #include <inplace_vector>
 #include <memory>
 
@@ -106,6 +108,48 @@ struct example
     float c_arr_[5];
     [[=ImRefl::string]] char c_char_arr_[32];
     const char* c_str_ = "This is null terminated C string";
+    [[=ImRefl::end_region()]]
+
+    [[=ImRefl::begin_region("std:: types")]]
+    std::string string_;
+    std::string_view string_view_ = "This is a string_view";
+    std::pair<int, float> pair_;
+    std::tuple<int, float, bool> tuple_;
+    std::optional<int> optional_ = 0;
+    std::variant<int, float, bool> variant_;
+    std::indirect<int> indirect_ = std::indirect<int>{};
+    std::bitset<5> bitset_;
+    std::unique_ptr<int> unique_ptr_;
+    std::shared_ptr<int> shared_ptr_;
+    std::weak_ptr<int> weak_ptr_;
+    std::function<void()> function_;
+    std::source_location source_location_ = std::source_location::current();
+    std::complex<float> complex_;
+    std::expected<bool, int> expected_;
+
+    [[=ImRefl::begin_region("Container types")]]
+    std::array<int, 5> array_;
+    std::span<int, 5> span_ = array_;
+    std::vector<int> vector_;
+    std::deque<int> deque_;
+    std::list<int> list_;
+    std::forward_list<int> forward_list_;
+    std::set<int> set_;
+    std::unordered_set<int> unordered_set_;
+    std::multiset<int> multiset_;
+    std::unordered_multiset<int> unordered_multiset_;
+    // BROKEN! std::map<int, float> map_;
+    // BROKEN! std::unordered_map<int, float> unordered_map_;
+    // BROKEN! std::multimap<int, float> multimap_;
+    // BROKEN! std::unordered_multimap<int, float> unordered_multimap_;
+    std::inplace_vector<int, 5> inplace_vector_;
+    [[=ImRefl::end_region()]]
+
+    [[=ImRefl::begin_region("chrono:: types")]]
+    system_clock::time_point time_point_ = std::chrono::system_clock::now();
+    duration<double> duration_ = 500ms;
+    year_month_day year_month_day_ = 1984y / February / 17;
+    hh_mm_ss<decltype(duration_)> hh_mm_ss_{days(3) + hours(4) + minutes(17) + seconds(48)};
 };
 
 int main()
@@ -140,8 +184,20 @@ int main()
 
     //player p = {};
     example ex = {};
-    int i = 714;
+
+    int i = 0;
     ex.raw_ptr_ = &i;
+    ex.shared_ptr_ = std::make_shared<int>(i);
+    *ex.shared_ptr_ = i;
+    ex.weak_ptr_ = ex.shared_ptr_;
+    ex.unique_ptr_ = std::make_unique<int>(i);
+
+    auto func = []() {
+        static size_t n = 0;
+        ++n;
+        std::println("Function called {} time{}", n, n == 1 ? "" : "s");
+    };
+    ex.function_ = func;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
