@@ -46,6 +46,7 @@ enum colour
 struct player
 {
     std::indirect<int> x = std::indirect<int>{5};
+    std::map<int, int> data;
 };
 
 int main()
