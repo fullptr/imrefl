@@ -49,6 +49,57 @@ struct player
     std::map<int, int> data;
 };
 
+struct example
+{
+    enum color
+    {
+        red,
+        orange,
+        yellow,
+        green,
+        blue,
+        violet
+    };
+
+    enum class shape
+    {
+        triangle,
+        square,
+        pentagon,
+        hexagon,
+        heptagon,
+        octagon
+    };
+
+    [[=ImRefl::begin_region("Enumeration types")]]
+    color enum_;
+    shape enum_class_;
+    [[=ImRefl::end_region()]]
+
+    [[=ImRefl::begin_region("Arithmetic types")]]
+    bool bool_;
+    char char_;
+
+    [[=ImRefl::begin_region("Signed integers")]]
+    short short_;
+    int int_;
+    long int l_int_;
+    long long int ll_int_;
+    [[=ImRefl::end_region()]]
+
+    [[=ImRefl::begin_region("Unsigned integers")]]
+    unsigned char u_char_;
+    unsigned short u_short_;
+    unsigned int u_int_;
+    unsigned long int u_l_int_;
+    unsigned long long int u_ll_int_;
+    [[=ImRefl::end_region()]]
+
+    [[=ImRefl::begin_region("Floating point")]]
+    float float_;
+    double double_;
+};
+
 int main()
 {
     glfwSetErrorCallback([](int err, const char* desc) {
@@ -79,7 +130,8 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    player p = {};
+    //player p = {};
+    example ex = {};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -88,7 +140,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Player", p);
+        ImRefl::Input("Example", ex);
         ImGui::End();
         ImGui::Render();
 
