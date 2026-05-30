@@ -138,10 +138,10 @@ struct example
     std::unordered_set<int> unordered_set_;
     std::multiset<int> multiset_;
     std::unordered_multiset<int> unordered_multiset_;
-    // BROKEN! std::map<int, float> map_;
-    // BROKEN! std::unordered_map<int, float> unordered_map_;
-    // BROKEN! std::multimap<int, float> multimap_;
-    // BROKEN! std::unordered_multimap<int, float> unordered_multimap_;
+    std::map<int, float> map_;
+    std::unordered_map<int, float> unordered_map_;
+    std::multimap<int, float> multimap_;
+    std::unordered_multimap<int, float> unordered_multimap_;
     std::inplace_vector<int, 5> inplace_vector_;
     [[=ImRefl::end_region()]]
 
