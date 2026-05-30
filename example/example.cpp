@@ -28,29 +28,6 @@ using namespace std::chrono;
 #include "imrefl.hpp"
 #include "imrefl_glm.hpp"
 
-enum class weapon
-{
-    none,
-    sword,
-    bow,
-    staff,
-    wand,
-    axe
-};
-
-enum colour
-{
-    green,
-    blue,
-    red
-};
-
-struct player
-{
-    std::indirect<int> x = std::indirect<int>{5};
-    std::map<int, int> data;
-};
-
 struct example
 {
     enum color
@@ -82,25 +59,23 @@ struct example
     bool bool_;
     char char_;
 
-    [[=ImRefl::begin_region("Signed integers")]]
+    [[=ImRefl::separator("Signed integers")]]
     short short_;
     int int_;
     long int l_int_;
     long long int ll_int_;
-    [[=ImRefl::end_region()]]
 
-    [[=ImRefl::begin_region("Unsigned integers")]]
+    [[=ImRefl::separator("Unsigned integers")]]
     unsigned char u_char_;
     unsigned short u_short_;
     unsigned int u_int_;
     unsigned long int u_l_int_;
     unsigned long long int u_ll_int_;
-    [[=ImRefl::end_region()]]
 
-    [[=ImRefl::begin_region("Floating point")]]
+    [[=ImRefl::separator("Floating point")]]
     float float_;
     double double_;
-    [[=ImRefl::end_region(2)]]
+    [[=ImRefl::end_region()]]
 
     [[=ImRefl::begin_region("C types")]]
     int* raw_ptr_;
@@ -117,15 +92,19 @@ struct example
     std::tuple<int, float, bool> tuple_;
     std::optional<int> optional_ = 0;
     std::variant<int, float, bool> variant_;
+    std::expected<bool, int> expected_;
     std::indirect<int> indirect_ = std::indirect<int>{};
-    std::bitset<5> bitset_;
+
+    [[=ImRefl::separator("Pointer types")]]
     std::unique_ptr<int> unique_ptr_;
     std::shared_ptr<int> shared_ptr_;
     std::weak_ptr<int> weak_ptr_;
+
+    [[=ImRefl::separator()]]
     std::function<void()> function_;
     std::source_location source_location_ = std::source_location::current();
     std::complex<float> complex_;
-    std::expected<bool, int> expected_;
+    std::bitset<5> bitset_;
 
     [[=ImRefl::begin_region("Container types")]]
     std::array<int, 5> array_;
@@ -134,10 +113,14 @@ struct example
     std::deque<int> deque_;
     std::list<int> list_;
     std::forward_list<int> forward_list_;
+
+    [[=ImRefl::separator("Set types")]]
     std::set<int> set_;
     std::unordered_set<int> unordered_set_;
     std::multiset<int> multiset_;
     std::unordered_multiset<int> unordered_multiset_;
+
+    [[=ImRefl::separator("Map types")]]
     std::map<int, float> map_;
     std::unordered_map<int, float> unordered_map_;
     std::multimap<int, float> multimap_;
@@ -146,7 +129,7 @@ struct example
     [[=ImRefl::end_region()]]
 
     [[=ImRefl::begin_region("chrono:: types")]]
-    system_clock::time_point time_point_ = std::chrono::system_clock::now();
+    system_clock::time_point time_point_ = system_clock::now();
     duration<double> duration_ = 500ms;
     year_month_day year_month_day_ = 1984y / February / 17;
     hh_mm_ss<decltype(duration_)> hh_mm_ss_{days(3) + hours(4) + minutes(17) + seconds(48)};
@@ -181,10 +164,8 @@ int main()
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-
-    //player p = {};
+    
     example ex = {};
-
     int i = 0;
     ex.raw_ptr_ = &i;
     ex.shared_ptr_ = std::make_shared<int>(i);
@@ -201,6 +182,8 @@ int main()
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        ex.time_point_ = system_clock::now();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
