@@ -1071,7 +1071,6 @@ struct Renderer<config, std::optional<T>>
     {
         const ImGuiStyle& style = ImGui::GetStyle();
         if (value.has_value()) {
-            ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - (ImGui::GetItemRectSize().x + style.ItemInnerSpacing.x));
             Input<config>(name, *value);
         } else {
             ImGui::Text("%s: <empty>", name);
