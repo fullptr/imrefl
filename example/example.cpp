@@ -179,8 +179,14 @@ struct example
     year_month_day year_month_day_ = 1989y / November / 9;
     const year_month_day const_year_month_day_ = 1815y / February / 17;
     hh_mm_ss<decltype(duration_)> hh_mm_ss_{hours(4) + minutes(17) + seconds(48)};
-    const decltype(hh_mm_ss_) const_hh_mm_ss_{hours(7) + minutes(48) + seconds(19)};\
+    const decltype(hh_mm_ss_) const_hh_mm_ss_{hours(7) + minutes(48) + seconds(19)};
     [[=ImRefl::end_region(2)]]
+
+    [[=ImRefl::begin_region("GLM types")]]
+    [[=ImRefl::in_line]] glm::vec4 glm_vec_;
+    [[=ImRefl::in_line]] glm::ivec4 glm_ivec_;
+    [[=ImRefl::in_line]] glm::dvec4 glm_dvec_;
+    [[=ImRefl::end_region()]]
 
     [[=ImRefl::begin_region("Style annotations")]]
     [[=ImRefl::ignore]] int ignore_attn_;
