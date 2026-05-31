@@ -419,7 +419,7 @@ bool render_range_element(const char* name, std::size_t i, R& range, std::ranges
         changed = Input<config>(index_name, element);
     }
 
-    if constexpr (can_erase<R>) {
+    if constexpr (can_erase<R> && !config.HasAttn<NonResizable>()) {
         ImGui::SameLine();
         if (square_button(fmt("-##e{}", i))) {
             it = range.erase(it);
