@@ -179,7 +179,20 @@ struct example
     year_month_day year_month_day_ = 1989y / November / 9;
     const year_month_day const_year_month_day_ = 1815y / February / 17;
     hh_mm_ss<decltype(duration_)> hh_mm_ss_{hours(4) + minutes(17) + seconds(48)};
-    const decltype(hh_mm_ss_) const_hh_mm_ss_{hours(7) + minutes(48) + seconds(19)};
+    const decltype(hh_mm_ss_) const_hh_mm_ss_{hours(7) + minutes(48) + seconds(19)};\
+    [[=ImRefl::end_region(2)]]
+
+    [[=ImRefl::begin_region("Style annotations")]]
+    [[=ImRefl::ignore]] int ignore_attn_;
+    [[=ImRefl::readonly]] int readonly_attn_;
+    [[=ImRefl::slider(-100, 100)]] int slider_attn_;
+    [[=ImRefl::drag(0, 100, 0.01f)]] float drag_attn_;
+    [[=ImRefl::color]] float color_attn_[3];
+    [[=ImRefl::color_wheel]] float color_wheel_attn_[4];
+    [[=ImRefl::string]] char string_attn_[32];
+    [[=ImRefl::radio]] shape radio_attn_;
+    [[=ImRefl::in_line]] float in_line_attn_[3];
+    [[=ImRefl::non_resizable]] std::vector<int> non_resizable_attn_ = {0, 0, 0, 0};
 };
 
 int main()
