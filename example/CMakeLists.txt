@@ -50,12 +50,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_link_libraries(imrefl-example PRIVATE stdc++exp)
+  target_link_libraries(imrefl-example PRIVATE stdc++exp -static)
 endif()
 
 target_link_libraries(imrefl-example PRIVATE
   ${OPENGL_LIBRARIES}
   glfw
   ImRefl
-  -static
 )
