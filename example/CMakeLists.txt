@@ -1,7 +1,14 @@
-find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 include(FetchContent)
+
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+)
+message("Fetching glfw...")
+FetchContent_MakeAvailable(glfw)
+
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -40,6 +47,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     -stdlib=libc++
     -Wl,-rpath,${CLANG_RPATH}
   )
+endif()
+
+if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_link_libraries(imrefl-example PRIVATE stdc++exp -static)
 endif()
 
 target_link_libraries(imrefl-example PRIVATE
