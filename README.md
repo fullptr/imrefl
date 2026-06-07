@@ -54,6 +54,10 @@ That's it! No macros or other setup needed!
     * `std::multimap<K, V>`.
     * `std::unordered_multimap<K, V>`.
     * `std::inplace_vector<T, N>`.
+    * `std::flat_map<K, V>`.
+    * `std::flat_set<T>`.
+    * `std::flat_multimap<K, V>`.
+    * `std::flat_multiset<T>`.
     * Supports `push_back`, `pop_back`, `push_front`, `pop_front`, `emplace` and `erase` when appropriate.
 * `std::unique_ptr<T>`, `std::shared_ptr<T>`, `std::weak_ptr<T>`.
     * Acts the same as `T*`.
