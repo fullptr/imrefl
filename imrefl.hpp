@@ -544,7 +544,7 @@ bool render_forward_range(const char* name, const R& range)
 {
     if (TreeNodeExNoDisable(name)) {
         std::size_t i = 0;
-        for (auto& element : range) {
+        for (auto&& element : range) {
             Input<config>(fmt("[{}]", i), element); 
             ++i;
         }
