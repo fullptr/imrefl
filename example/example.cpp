@@ -1,22 +1,24 @@
 #include <array>
+#include <chrono>
+#include <chrono>
 #include <climits>
 #include <deque>
+#include <expected>
+#include <flat_map>
+#include <flat_set>
 #include <forward_list>
+#include <functional>
+#include <inplace_vector>
 #include <list>
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <memory>
 #include <print>
 #include <set>
 #include <string>
-#include <chrono>
-#include <functional>
 #include <unordered_set>
-#include <map>
 #include <vector>
-#include <expected>
-#include <chrono>
-using namespace std::chrono_literals;
-using namespace std::chrono;
-#include <inplace_vector>
-#include <memory>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -27,6 +29,9 @@ using namespace std::chrono;
 
 #include "imrefl.hpp"
 #include "imrefl_glm.hpp"
+
+using namespace std::chrono_literals;
+using namespace std::chrono;
 
 int i = 49;
 
@@ -169,6 +174,9 @@ struct example
     const decltype(unordered_multimap_) const_unordered_multimap_ = {{19, 0.02f}, {19, 4.254f}};
     std::inplace_vector<int, 5> inplace_vector_;
     const decltype(inplace_vector_) const_inplace_vector_ = {3, 7, 23, 9, 10};
+
+    std::flat_map<int, float> flat_map_;
+    const decltype(map_) const_flat_map_ = {{8, 4.3f}, {9, 12.5f}};
     [[=ImRefl::end_region()]]
 
     [[=ImRefl::begin_region("chrono:: types")]]
