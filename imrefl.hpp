@@ -11,18 +11,23 @@
 #include <expected>
 #include <format>
 #include <functional>
+#include <map>
 #include <memory>
 #include <meta>
 #include <numeric>
 #include <optional>
 #include <ranges>
+#include <set>
 #include <source_location>
-#include <string>
 #include <stack>
+#include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace ImRefl {
 
@@ -246,6 +251,16 @@ static_assert(is_set_type<std::unordered_set<int>>);
 static_assert(!is_set_type<std::map<int, int>>);
 static_assert(!is_set_type<int>);
 
+template <typename R>
+concept is_swappable =
+    std::ranges::random_access_range<R> &&
+    requires(std::ranges::range_reference_t<R> a, std::ranges::range_reference_t<R> b) {
+        std::swap(a, b);
+    };
+
+static_assert(is_swappable<std::vector<int>>);
+static_assert(!is_swappable<std::unordered_map<int, int>>);
+
 // INTERNAL HELPERS
 
 consteval auto nsdm_of(std::meta::info type)
@@ -391,13 +406,11 @@ bool render_pointer_as_value(const char* name, T* value)
 template <Config config, std::ranges::forward_range R>
 bool render_range_element(const char* name, std::size_t i, R& range, std::ranges::iterator_t<R>& it)
 {
-    constexpr auto is_const_range = is_const_type(remove_reference(^^std::ranges::range_reference_t<R>));
-
     const auto index_name = fmt("[{}]", i);
-    auto& element = *it;
+    auto&& element = *it;
 
     bool changed = false;
-    if constexpr (!is_const_range && std::ranges::random_access_range<R>) {
+    if constexpr (detail::is_swappable<R>) {
         changed = Input<config>(fmt("##{}", i), element);
 
         ImGui::SameLine();
