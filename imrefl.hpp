@@ -259,6 +259,7 @@ concept is_swappable =
     };
 
 static_assert(is_swappable<std::vector<int>>);
+static_assert(!is_swappable<const std::vector<int>>);
 static_assert(!is_swappable<std::unordered_map<int, int>>);
 
 // INTERNAL HELPERS
