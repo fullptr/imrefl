@@ -368,7 +368,7 @@ bool square_button(const char* name)
 inline void render_help_marker(const char* text, const char* label)
 {
     ImGui::SameLine();
-    ImGui::TextDisabled(label);
+    ImGui::TextDisabled("%s", label);
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted(text);
         ImGui::EndTooltip();
