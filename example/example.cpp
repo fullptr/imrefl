@@ -214,6 +214,7 @@ struct example
     [[=ImRefl::radio]] shape radio_attn_;
     [[=ImRefl::in_line]] float in_line_attn_[3];
     [[=ImRefl::non_resizable]] std::vector<int> non_resizable_attn_ = {0, 0, 0, 0};
+    [[=ImRefl::help("This field has a tooltip explaining what it does.")]] int help_attn_;
 };
 
 int main()

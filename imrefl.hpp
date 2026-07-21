@@ -137,6 +137,9 @@ inline static constexpr String string {};
 struct Radio {};
 inline static constexpr Radio radio {};
 
+struct Help { const char* text; };
+consteval Help help(std::string_view text) { return {std::define_static_string(text)}; }
+
 // ============================================================================
 // LIBRARY UTILITY 
 // ============================================================================
@@ -348,6 +351,18 @@ bool square_button(const char* name)
 {
     const float button_size = ImGui::GetFrameHeight();
     return ImGui::Button(name, {button_size, button_size});
+}
+
+// Renders a "(?)" marker after the current item, showing the given text
+// in a tooltip when hovered.
+inline void render_help_marker(const char* text)
+{
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::TextUnformatted(text);
+        ImGui::EndTooltip();
+    }
 }
 
 // Stores an object of type T in static storage and implements a popup
@@ -698,6 +713,10 @@ struct Renderer<config, T>
                         } else {
                             changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
                         }
+
+                        if constexpr (constexpr auto help = new_config.FetchAttn<Help>()) {
+                            detail::render_help_marker(help->text);
+                        }
                     }
                 }
             }
@@ -752,6 +771,10 @@ struct Renderer<config, T>
                         }
     
                         Input<new_config>(identifier_of(member).data(), x.[:member:]);
+
+                        if constexpr (constexpr auto help = new_config.FetchAttn<Help>()) {
+                            detail::render_help_marker(help->text);
+                        }
                     }
                 }
             }

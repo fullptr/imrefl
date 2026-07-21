@@ -97,6 +97,7 @@ That's it! No macros or other setup needed!
 | `ImRefl::separator(title)` | Adds an ImGui separator line with optional title above the annotated field. |
 | `ImRefl::begin_region(title)` | Adds a collapsible region within an aggregate. |
 | `ImRefl::end_region(levels)` | Closes a collapsible region; defaults to 1 level, 0 is used to close all nested regions in the stack. | 
+| `ImRefl::help(text)` | Adds a "(?)" marker after the field that shows `text` in a tooltip when hovered. |
 
 ### Third-party types
 It is possible to implement the rendering logic for custom types by providing an implementation of `ImRefl::Renderer` for your type. For example:
