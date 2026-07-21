@@ -137,8 +137,18 @@ inline static constexpr String string {};
 struct Radio {};
 inline static constexpr Radio radio {};
 
-struct Help { const char* text; };
-consteval Help help(std::string_view text) { return {std::define_static_string(text)}; }
+struct Help
+{
+    const char* text;
+    const char* label;
+};
+consteval Help help(std::string_view text, std::string_view label = "(?)")
+{
+    return {
+        std::define_static_string(text),
+        std::define_static_string(label)
+    };
+}
 
 // ============================================================================
 // LIBRARY UTILITY 
@@ -353,12 +363,12 @@ bool square_button(const char* name)
     return ImGui::Button(name, {button_size, button_size});
 }
 
-// Renders a "(?)" marker after the current item, showing the given text
-// in a tooltip when hovered.
-inline void render_help_marker(const char* text)
+// Renders the given label after the current item,
+// showing the given text in a tooltip when hovered.
+inline void render_help_marker(const char* text, const char* label)
 {
     ImGui::SameLine();
-    ImGui::TextDisabled("(?)");
+    ImGui::TextDisabled(label);
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted(text);
         ImGui::EndTooltip();
@@ -715,7 +725,7 @@ struct Renderer<config, T>
                         }
 
                         if constexpr (constexpr auto help = new_config.FetchAttn<Help>()) {
-                            detail::render_help_marker(help->text);
+                            detail::render_help_marker(help->text, help->label);
                         }
                     }
                 }
@@ -773,7 +783,7 @@ struct Renderer<config, T>
                         Input<new_config>(identifier_of(member).data(), x.[:member:]);
 
                         if constexpr (constexpr auto help = new_config.FetchAttn<Help>()) {
-                            detail::render_help_marker(help->text);
+                            detail::render_help_marker(help->text, help->label);
                         }
                     }
                 }
