@@ -1,6 +1,10 @@
 #ifndef INCLUDED_IMREFL_H
 #define INCLUDED_IMREFL_H
 
+#if defined(__GNUC__) && __GNUC__ >= 16
+#define GCC_FEATURES
+#endif
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -1261,6 +1265,7 @@ struct Renderer<config, std::unique_ptr<T, Deleter>>
     }
 };
 
+#ifdef GCC_FEATURES
 template <Config config, typename T, typename Allocator>
 struct Renderer<config, std::indirect<T, Allocator>>
 {
@@ -1274,6 +1279,7 @@ struct Renderer<config, std::indirect<T, Allocator>>
         return Input<config>(name, *value);
     }
 };
+#endif
 
 template <Config config, typename T>
 struct Renderer<config, std::shared_ptr<T>>

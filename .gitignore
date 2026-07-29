@@ -4,3 +4,4 @@ imgui/
 
 build*/
 .cache/
+.vscode/
