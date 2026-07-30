@@ -1336,7 +1336,7 @@ struct Renderer<config, std::bitset<N>>
         ImGui::Text("%s", name);
         template for (constexpr auto i : detail::integer_sequence(N)) {
             if constexpr (config.HasAttn<InLine>()) { ImGui::SameLine(); }
-            Input<config>(detail::fmt("[{}]", i), value[i]);
+            Renderer<config, bool>::Render(detail::fmt("[{}]", i), value[i]);
         }
         return false;
     }
