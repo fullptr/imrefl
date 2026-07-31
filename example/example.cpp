@@ -18,6 +18,11 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <version>
+
+#ifdef __cpp_lib_inplace_vector
+#include <inplace_vector>
+#endif
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -28,10 +33,6 @@
 
 #include "imrefl.hpp"
 #include "imrefl_glm.hpp"
-
-#ifdef GCC_FEATURES
-#include <inplace_vector>
-#endif
 
 using namespace std::chrono_literals;
 using namespace std::chrono;
@@ -127,7 +128,7 @@ struct example
     std::expected<bool, int> expected_;
     const decltype(expected_) const_expected_ = true;
 
-    #ifdef GCC_FEATURES
+    #ifdef __cpp_lib_indirect
     std::indirect<int> indirect_ = std::indirect<int>{};
     const decltype(indirect_) const_indirect_ = std::indirect<int>{73};
     #endif
@@ -159,7 +160,7 @@ struct example
     std::forward_list<int> forward_list_;
     const decltype(forward_list_) const_forward_list_ = {76, 854, 234, 8};
 
-    #ifdef GCC_FEATURES
+    #ifdef __cpp_lib_inplace_vector
     std::inplace_vector<int, 5> inplace_vector_;
     const decltype(inplace_vector_) const_inplace_vector_ = {3, 7, 23, 9, 10};
     #endif
