@@ -126,11 +126,11 @@ inline static constexpr Color color {};
 struct ColorWheel {};
 inline static constexpr ColorWheel color_wheel {};
 
-struct Slider { int min; int max; };
-constexpr Slider slider(int min, int max) { return {min, max}; }
+struct Slider { float min; float max; };
+constexpr Slider slider(float min, float max) { return {min, max}; }
 
-struct Drag { int min; int max; float speed; };
-constexpr Drag drag(int min, int max, float speed = 1.0f) { return {min, max, speed}; }
+struct Drag { float min; float max; float speed; };
+constexpr Drag drag(float min, float max, float speed = 1.0f) { return {min, max, speed}; }
 
 struct String {};
 inline static constexpr String string {};
