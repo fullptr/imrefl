@@ -211,6 +211,7 @@ struct example
     [[=ImRefl::in_line]] glm::vec4 glm_vec_;
     [[=ImRefl::in_line]] glm::ivec4 glm_ivec_;
     [[=ImRefl::in_line]] glm::dvec4 glm_dvec_;
+    [[=ImRefl::drag(-1, 1, 0.01f)]] glm::mat4 glm_mat_;
     [[=ImRefl::end_region()]]
 
     [[=ImRefl::begin_region("Style annotations")]]

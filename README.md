@@ -77,7 +77,7 @@ That's it! No macros or other setup needed!
     * `std::chrono::hh_mm_ss<Duration>`.
 
 #### `imrefl_glm.hpp`
-* All vector types from the GLM graphics library, e.g. `glm::vec2` and `glm::ivec3`.
+* All vector and matrix types from the GLM graphics library, e.g. `glm::vec2`, `glm::ivec3`, `glm::mat4` etc.
 
 ### Annotations
 
