@@ -228,6 +228,17 @@ struct example
     [[=ImRefl::help("This field has a tooltip explaining what it does.")]] int help_attn_;
 };
 
+//void changed()
+//{
+//    std::println("Value changed");
+//}
+
+struct callbackTest {
+    static void changed(float& f) { std::println("Value changed: {}", f); }
+
+    [[=ImRefl::on_changed(^^changed)]] float member;
+} test;
+
 int main()
 {
     glfwSetErrorCallback([](int err, const char* desc) {
@@ -278,7 +289,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug");
-        ImRefl::Input("Example", ex);
+        ImRefl::Input("Example", test);
         ImGui::End();
         ImGui::Render();
 

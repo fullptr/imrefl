@@ -77,24 +77,6 @@ template <typename T>
 struct ExternalAnnotations
 {};
 
-template <Config config, typename T>
-bool Input(const char* name, T&& value)
-{
-    using Type = [:remove_cvref(^^T):];
-    ImGui::PushID(name);
-    const bool changed = Renderer<config, Type>::Render(name, std::forward<T>(value));
-    ImGui::PopID();
-    return changed;
-}
-
-// The main entry point for rendering.
-template <typename T>
-bool Input(const char* name, T&& value)
-{
-    constexpr auto config = Config{};
-    return Input<config>(name, std::forward<T>(value));
-}
-
 // ============================================================================
 // LIBRARY ANNOTATIONS
 // ============================================================================
@@ -149,6 +131,58 @@ consteval Help help(std::string_view text, std::string_view label = "(?)")
         std::define_static_string(text),
         std::define_static_string(label)
     };
+}
+
+//namespace detail {
+//
+//consteval bool is_valid_on_changed_func(std::meta::info func)
+//{
+//    return is_function(func) 
+//        && return_type_of(func) == ^^void 
+//        && parameters_of(func).size() == 1
+//        && is_lvalue_reference_qualified(type_of(parameters_of(func)[0]));
+//}
+//
+//}
+
+struct OnChanged { 
+    std::meta::info func; 
+    std::meta::info paramType;
+};
+consteval OnChanged on_changed(std::meta::info func) 
+{
+    if (!is_function(func)) throw "func must be a function";
+    if (return_type_of(func) != ^^void) throw "func must return void";
+    if (parameters_of(func).size() != 1) throw "func must take exactly one parameter";
+
+    //static_assert(valid_func, "func must follow the signature void(T&)");
+    return {func, type_of(parameters_of(func)[0])}; 
+}
+
+template <Config config, typename T>
+bool Input(const char* name, T&& value)
+{
+    using Type = [:remove_cvref(^^T):];
+    ImGui::PushID(name);
+    const bool changed = Renderer<config, Type>::Render(name, std::forward<T>(value));
+    ImGui::PopID();
+
+    if constexpr (constexpr auto on_changed_attn = config.FetchAttn<OnChanged>()) {
+        static_assert(remove_cvref(on_changed_attn->paramType) == remove_cvref(^^T), "on_changed function param must be of type T");
+        if (changed) {
+            [:on_changed_attn->func:](value);
+        }
+    }
+
+    return changed;
+}
+
+// The main entry point for rendering.
+template <typename T>
+bool Input(const char* name, T&& value)
+{
+    constexpr auto config = Config{};
+    return Input<config>(name, std::forward<T>(value));
 }
 
 // ============================================================================
