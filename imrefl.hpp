@@ -77,24 +77,6 @@ template <typename T>
 struct ExternalAnnotations
 {};
 
-template <Config config, typename T>
-bool Input(const char* name, T&& value)
-{
-    using Type = [:remove_cvref(^^T):];
-    ImGui::PushID(name);
-    const bool changed = Renderer<config, Type>::Render(name, std::forward<T>(value));
-    ImGui::PopID();
-    return changed;
-}
-
-// The main entry point for rendering.
-template <typename T>
-bool Input(const char* name, T&& value)
-{
-    constexpr auto config = Config{};
-    return Input<config>(name, std::forward<T>(value));
-}
-
 // ============================================================================
 // LIBRARY ANNOTATIONS
 // ============================================================================
@@ -149,6 +131,52 @@ consteval Help help(std::string_view text, std::string_view label = "(?)")
         std::define_static_string(text),
         std::define_static_string(label)
     };
+}
+
+struct OnChanged { 
+    std::meta::info func; 
+    std::meta::info param_type;
+    bool is_nonstatic_member_func;
+};
+consteval OnChanged on_changed(std::meta::info func) 
+{
+    if (!is_function(func)) throw "func must be a function";
+    if (return_type_of(func) != ^^void) throw "func must return void";
+    if (parameters_of(func).size() != 1) throw "func must take exactly one parameter";
+
+    OnChanged attn;
+    attn.func = func;
+    attn.param_type = type_of(parameters_of(func)[0]);
+    attn.is_nonstatic_member_func = is_class_member(func) && !is_static_member(func);
+    return attn; 
+}
+
+template <Config config, typename T>
+bool Input(const char* name, T&& value)
+{
+    using Type = [:remove_cvref(^^T):];
+    ImGui::PushID(name);
+    const bool changed = Renderer<config, Type>::Render(name, std::forward<T>(value));
+    ImGui::PopID();
+
+    if constexpr (constexpr auto on_changed_attn = config.FetchAttn<OnChanged>()) {
+        if constexpr (!on_changed_attn->is_nonstatic_member_func) {     // We handle nonstatic member functions in Renderer<detail::aggregate>
+            static_assert(remove_cvref(on_changed_attn->param_type) == remove_cvref(^^T), "on_changed function param must be of type T");
+            if (changed) {
+                [:on_changed_attn->func:](value);
+            }
+        }
+    }
+
+    return changed;
+}
+
+// The main entry point for rendering.
+template <typename T>
+bool Input(const char* name, T&& value)
+{
+    constexpr auto config = Config{};
+    return Input<config>(name, std::forward<T>(value));
 }
 
 // ============================================================================
@@ -722,7 +750,19 @@ struct Renderer<config, T>
                         if constexpr (new_config.HasAttn<Readonly>()) {
                             Input<new_config>(identifier_of(member).data(), std::as_const(x.[:member:]));
                         } else {
-                            changed = Input<new_config>(identifier_of(member).data(), x.[:member:]) || changed;
+                            bool member_changed = Input<new_config>(identifier_of(member).data(), x.[:member:]);
+
+                            if constexpr (constexpr auto on_changed_attn = new_config.FetchAttn<OnChanged>()) {
+                                if constexpr (on_changed_attn->is_nonstatic_member_func) {
+                                    static_assert(remove_cvref(on_changed_attn->param_type) == remove_cvref(type_of(member)), "on_changed function param must be of type type_of(member)");
+                                    static_assert(parent_of(on_changed_attn->func) == ^^T, "nonstatic member function must be a member of class T");
+                                    if (member_changed) {
+                                        x.[:on_changed_attn->func:](x.[:member:]);
+                                    }
+                                }
+                            }
+
+                            changed = member_changed || changed;
                         }
 
                         if constexpr (constexpr auto help = new_config.FetchAttn<Help>()) {

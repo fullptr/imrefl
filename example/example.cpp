@@ -214,6 +214,17 @@ struct example
     [[=ImRefl::drag(-1, 1, 0.01f)]] glm::mat4 glm_mat_;
     [[=ImRefl::end_region()]]
 
+    [[=ImRefl::begin_region("Functional annotations")]]
+    struct 
+    {
+        void aChanged(float) { b = a * 2.f; }
+        void bChanged(float) { a = b / 2.f; }
+        
+        [[=ImRefl::on_changed(^^aChanged)]] float a;
+        [[=ImRefl::on_changed(^^bChanged)]] float b;
+    } on_changed_attn_;
+    [[=ImRefl::end_region()]]
+
     [[=ImRefl::begin_region("Style annotations")]]
     [[=ImRefl::ignore]] int ignore_attn_;
     [[=ImRefl::readonly]] int readonly_attn_;
@@ -226,6 +237,7 @@ struct example
     [[=ImRefl::in_line]] float in_line_attn_[3];
     [[=ImRefl::non_resizable]] std::vector<int> non_resizable_attn_ = {0, 0, 0, 0};
     [[=ImRefl::help("This field has a tooltip explaining what it does.")]] int help_attn_;
+
 };
 
 int main()
