@@ -754,6 +754,7 @@ struct Renderer<config, T>
 
                             if constexpr (constexpr auto on_changed_attn = new_config.FetchAttn<OnChanged>()) {
                                 if constexpr (on_changed_attn->is_nonstatic_member_func) {
+                                    static_assert(remove_cvref(on_changed_attn->param_type) == remove_cvref(type_of(member)), "on_changed function param must be of type type_of(member)");
                                     static_assert(parent_of(on_changed_attn->func) == ^^T, "nonstatic member function must be a member of class T");
                                     if (member_changed) {
                                         x.[:on_changed_attn->func:](x.[:member:]);

@@ -98,6 +98,7 @@ That's it! No macros or other setup needed!
 | `ImRefl::begin_region(title)` | Adds a collapsible region within an aggregate. |
 | `ImRefl::end_region(levels)` | Closes a collapsible region; defaults to 1 level, 0 is used to close all nested regions in the stack. | 
 | `ImRefl::help(text, label="(?)")` | Adds a marker (`label`, defaulting to `"(?)"`) after the field that shows `text` in a tooltip when hovered. |
+| `ImRefl::on_changed(func)` | Registers a callback function (`func`, passed as a reflection) to be invoked when the input is changed. The signature of the function must match `void(U)`, where `U` is the input's type `T` or a reference to `T`. Nonstatic member functions are allowed, but may **only** be used within an aggregate to annotate nonstatic data members that are defined within the same aggregate. In this case, the function will be invoked from the instance of the aggregate that was passed to `ImRefl::Input`. |
 
 ### Third-party types
 It is possible to implement the rendering logic for custom types by providing an implementation of `ImRefl::Renderer` for your type. For example:
