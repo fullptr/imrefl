@@ -228,13 +228,17 @@ struct example
     [[=ImRefl::help("This field has a tooltip explaining what it does.")]] int help_attn_;
 };
 
-//void changed()
-//{
-//    std::println("Value changed");
-//}
+void changed(float v)
+{
+    std::println("Value changed");
+}
+
+struct test {
+    void mChanged(float& f) {};
+};
 
 struct callbackTest {
-    static void changed(float& f) { std::println("Value changed: {}", f); }
+    void mChanged(float& f) { std::println("Value changed: {}", f); }
 
     [[=ImRefl::on_changed(^^changed)]] float member;
 } test;
